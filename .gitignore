@@ -1,0 +1,7 @@
+data/raw/
+results/
+*.jld2
+*.h5
+.ipynb_checkpoints/
+__pycache__/
+Manifest.toml
