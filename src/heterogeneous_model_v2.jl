@@ -180,7 +180,7 @@ end
 # 8. RUN ONE CONDITION (multiple seeds)
 # ─────────────────────────────────────────────────────────────
 
-function run_condition(; σ_mean, σ_std, n_seeds=15, n_steps=500)
+function run_condition(; σ_mean, σ_std, n_seeds=15, n_steps=500, noise=0.5)
     φ_values   = Float64[]
     σmean_vals = Float64[]
     σstd_vals  = Float64[]
@@ -188,7 +188,7 @@ function run_condition(; σ_mean, σ_std, n_seeds=15, n_steps=500)
     print("  σ_std=$(rpad(σ_std,5)) : ")
     for seed in 1:n_seeds
         r = run_single_seed(; σ_mean=σ_mean, σ_std=σ_std,
-                            seed=seed, n_steps=n_steps)
+                            seed=seed, n_steps=n_steps, noise=noise)
         push!(φ_values,   r.φ_steady)
         push!(σmean_vals, r.actual_σ_mean)
         push!(σstd_vals,  r.actual_σ_std)
@@ -208,13 +208,14 @@ end
 
 function run_experiment(; σ_mean=0.7,
                         σ_std_list=[0.0, 0.05, 0.10, 0.15, 0.20, 0.25],
-                        n_seeds=15, n_steps=500,
-                        output_dir="/home/umar/sheep_collective/results")
+                        n_seeds=15, n_steps=500, noise=0.5,
+                        output_dir="/home/umar/sheep_collective/results",
+                        label="experiment")
 
     println("=" ^ 64)
-    println("  EXPERIMENT 1 — effect of σ_std on flock cohesion φ")
+    println("  $(label) — effect of σ_std on flock cohesion φ")
     println()
-    println("  Fixed:    σ_mean = $(σ_mean),  noise = 0.5,  N = 200")
+    println("  Fixed:    σ_mean = $(σ_mean),  noise = $(noise),  N = 200")
     println("  Varying:  σ_std  = $(σ_std_list)")
     println("  Per cond: $(n_seeds) seeds, $(n_steps) steps each")
     println()
@@ -224,6 +225,7 @@ function run_experiment(; σ_mean=0.7,
 
     raw = DataFrame(
         σ_mean        = Float64[],
+        noise         = Float64[],
         σ_std_input   = Float64[],
         seed          = Int[],
         actual_σ_mean = Float64[],
@@ -232,6 +234,7 @@ function run_experiment(; σ_mean=0.7,
     )
 
     summary = DataFrame(
+        noise        = Float64[],
         σ_std_input  = Float64[],
         φ_mean       = Float64[],
         φ_sd         = Float64[],
@@ -241,15 +244,16 @@ function run_experiment(; σ_mean=0.7,
     for σ_std in σ_std_list
         φ_vals, σm_vals, σs_vals =
             run_condition(; σ_mean=σ_mean, σ_std=σ_std,
-                          n_seeds=n_seeds, n_steps=n_steps)
+                          n_seeds=n_seeds, n_steps=n_steps, noise=noise)
         for k in 1:n_seeds
             push!(raw, (
-                σ_mean=σ_mean, σ_std_input=σ_std, seed=k,
+                σ_mean=σ_mean, noise=noise, σ_std_input=σ_std, seed=k,
                 actual_σ_mean=σm_vals[k], actual_σ_std=σs_vals[k],
                 φ_steady=φ_vals[k]
             ))
         end
         push!(summary, (
+            noise       = noise,
             σ_std_input = σ_std,
             φ_mean      = mean(φ_vals),
             φ_sd        = std(φ_vals),
@@ -259,8 +263,10 @@ function run_experiment(; σ_mean=0.7,
     end
 
     mkpath(output_dir)
-    CSV.write(joinpath(output_dir, "experiment1_rawdata.csv"), raw)
-    CSV.write(joinpath(output_dir, "experiment1_means.csv"),    summary)
+    raw_fname    = joinpath(output_dir, "$(label)_rawdata.csv")
+    means_fname  = joinpath(output_dir, "$(label)_means.csv")
+    CSV.write(raw_fname,   raw)
+    CSV.write(means_fname, summary)
 
     println("=" ^ 64)
     println("  RESULTS TABLE (φ = mean ± SD across $(n_seeds) seeds):")
@@ -270,9 +276,9 @@ function run_experiment(; σ_mean=0.7,
         println("  σ_std=$(rpad(row.σ_std_input,5))  φ = $(rpad(round(row.φ_mean;digits=3),5)) ± $(rpad(round(row.φ_sd;digits=3),5))  $(bar)")
     end
     println("=" ^ 64)
-    println("  Files saved to /home/umar/sheep_collective/results/:")
-    println("    experiment1_rawdata.csv  (one row per seed × condition)")
-    println("    experiment1_means.csv    (one row per condition)")
+    println("  Files saved to $(output_dir)/:")
+    println("    $(basename(raw_fname))")
+    println("    $(basename(means_fname))")
     println("=" ^ 64)
 
     return raw, summary
@@ -280,12 +286,16 @@ end
 
 
 # ─────────────────────────────────────────────────────────────
-# 10. RUN IT
+# 10. RUN IT  (only when executed directly, not on include())
 # ─────────────────────────────────────────────────────────────
 
-run_experiment(
-    σ_mean      = 0.7,
-    σ_std_list  = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25],
-    n_seeds     = 15,
-    n_steps     = 500,
-)
+if abspath(PROGRAM_FILE) == @__FILE__
+    run_experiment(
+        σ_mean      = 0.7,
+        σ_std_list  = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25],
+        n_seeds     = 15,
+        n_steps     = 500,
+        noise       = 0.5,
+        label       = "experiment1",
+    )
+end
