@@ -1,0 +1,56 @@
+============================================================
+STATISTICAL ANALYSIS — stats_final.py
+============================================================
+
+--- Exp1 + Exp2 combined (noise = 0.5) ---
+
+One-way ANOVA (phi_steady ~ sigma_std_input):
+  F = 130.4646,  p = 5.2607e-74
+
+Welch t-tests vs baseline (sigma_std_input=0.0):
+ sigma_std  n_base n_other  mean_base mean_other        t          p   cohens_d
+    0.0500      15      15     0.9699     0.9724  -1.0912 2.8771e-01    -0.3985
+    0.1000      15      15     0.9699     0.9715  -0.6901 4.9697e-01    -0.2520
+    0.1500      15      15     0.9699     0.9670   0.9697 3.4064e-01     0.3541
+    0.2000      15      15     0.9699     0.9687   0.4548 6.5279e-01     0.1661
+    0.2500      15      35     0.9699     0.9354   4.3547 9.6168e-05     1.0601
+    0.3000      15      20     0.9699     0.9241   4.5618 1.7854e-04     1.4497
+    0.3500      15      20     0.9699     0.7665   7.7799 2.3410e-07     2.4620
+    0.4000      15      20     0.9699     0.6641  13.1988 4.1608e-11     4.1777
+    0.4500      15      20     0.9699     0.4634  20.2634 1.9244e-14     6.4129
+
+--- Exp3 noise = 0.3 ---
+
+One-way ANOVA (phi_steady ~ sigma_std_input):
+  F = 106.8538,  p = 3.7496e-23
+
+Welch t-tests vs baseline (sigma_std_input=0.0):
+ sigma_std  n_base n_other  mean_base mean_other        t          p   cohens_d
+    0.2000      15      15     0.9901     0.9893   0.8488 4.0405e-01     0.3099
+    0.3500      15      15     0.9901     0.8522   5.0753 1.6878e-04     1.8533
+    0.4500      15      15     0.9901     0.5020  13.8254 1.4802e-09     5.0483
+
+--- Exp3 noise = 0.5 ---
+
+One-way ANOVA (phi_steady ~ sigma_std_input):
+  F = 117.0868,  p = 4.2043e-24
+
+Welch t-tests vs baseline (sigma_std_input=0.0):
+ sigma_std  n_base n_other  mean_base mean_other        t          p   cohens_d
+    0.2000      15      15     0.9699     0.9687   0.4548 6.5279e-01     0.1661
+    0.3500      15      15     0.9699     0.7383   7.5131 2.6834e-06     2.7434
+    0.4500      15      15     0.9699     0.4644  15.8364 2.2156e-10     5.7826
+
+--- Exp3 noise = 0.7 ---
+
+One-way ANOVA (phi_steady ~ sigma_std_input):
+  F = 65.5754,  p = 2.5384e-18
+
+Welch t-tests vs baseline (sigma_std_input=0.0):
+ sigma_std  n_base n_other  mean_base mean_other        t          p   cohens_d
+    0.2000      15      15     0.9429     0.9380   0.8601 3.9785e-01     0.3141
+    0.3500      15      15     0.9429     0.6712   5.2922 1.1073e-04     1.9324
+    0.4500      15      15     0.9429     0.3921  14.0151 1.0419e-09     5.1176
+
+Bootstrap CIs saved -> /home/umar/sheep_collective/results/bootstrap_CIs.csv
+  18 conditions, 10000 resamples each
