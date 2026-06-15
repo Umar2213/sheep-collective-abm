@@ -1,0 +1,6 @@
+# Python dependencies for the analysis + figure scripts.
+# Julia dependencies are pinned separately in Project.toml / Manifest.toml.
+numpy
+pandas
+matplotlib
+scipy

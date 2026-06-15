@@ -3,15 +3,17 @@
 A Vicsek-type agent-based flocking model in which each individual carries its own
 **social weight** `w` — how strongly it aligns to its neighbours. The population
 mean is held fixed (`w̄ = 0.7`) while the **dispersion** `σ` of `w` across
-individuals is increased. We ask how group-level order responds, across three
-noise levels.
+individuals is increased. We measure how group-level order responds, across three
+levels of movement noise.
+
+The order parameter **φ** is the mean alignment of the flock: φ = 1 means every
+individual moves in the same direction, φ ≈ 0 means directions are random.
 
 ## Main result
 
-Increasing trait dispersion produces a **smooth, continuous decline** of the
-collective order parameter φ — not a sharp threshold. The dispersion a flock
-tolerates before order begins to break down (φ falling to 0.90) shrinks as
-environmental noise rises:
+Increasing trait dispersion produces a **smooth, continuous decline** of φ — not a
+sharp threshold. The dispersion a flock tolerates before order begins to break
+down (φ falling to 0.90) shrinks as movement noise rises:
 
 | noise η | tolerated dispersion σ* (φ = 0.90) |
 |--------:|:----------------------------------:|
@@ -23,9 +25,9 @@ Approaching the loss of order, between-realization fluctuations (susceptibility)
 grow and the temporal autocorrelation of φ rises toward 1 — a critical-slowing-
 down signature. The mechanism is transparent: at fixed mean, raising σ develops
 heavy tails in the social-weight distribution, so a growing minority of
-individuals barely align (see figure panels e–f).
+individuals barely align (figure panels e–f).
 
-![main figure](figures/fig_main_v2.png)
+![main figure](figures/fig_main_production.png)
 
 ## What is — and is not — claimed
 
@@ -38,10 +40,14 @@ individuals barely align (see figure panels e–f).
   trait-distribution shapes) rather than attributing it to variance alone.
 - The model is **simulation-only**. It is a scaffold, not fit to real trajectories.
 
-## Reproduce
+## Requirements
 
-Requires Julia (see `Project.toml` / `Manifest.toml`) and Python with
-`numpy pandas matplotlib scipy`.
+- **Julia** with the environment pinned in `Project.toml` / `Manifest.toml`
+  (activate with `--project=.`).
+- **Python 3** with the packages in `requirements.txt`
+  (`pip install -r requirements.txt`).
+
+## Reproduce
 
 ```bash
 # 1. canonical equilibrated sweep  (1,140 runs x 60k steps; ~45 min on many cores)
@@ -66,7 +72,7 @@ python3 src/make_main_figure.py
   at every σ) and `diag_equilibration.jl` (short 500-step runs over-state φ near
   the transition by up to ~0.13).
 
-## Files
+## Repository layout
 src/heterogeneous_model_v2.jl   model definition
 
 src/production_sweep.jl         canonical sweep -> results/production/
@@ -84,6 +90,14 @@ results/production/             canonical dataset (means + replicates)
 results/diagnostics/            equilibration + relaxation evidence
 
 figures/                        figures
+
+requirements.txt                Python dependencies
+
+Project.toml / Manifest.toml    pinned Julia environment
+## Citing this work
+
+See `CITATION.cff`. Author: Umar Aziz (ORCID 0009-0009-6266-4340).
+
 ## License
 
 See `LICENSE`.
