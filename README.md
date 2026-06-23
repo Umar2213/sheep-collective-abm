@@ -72,26 +72,7 @@ python3 src/make_main_figure.py
   at every σ) and `diag_equilibration.jl` (short 500-step runs over-state φ near
   the transition by up to ~0.13).
 
-## Repository layout
-src/heterogeneous_model_v2.jl   model definition
 
-src/production_sweep.jl         canonical sweep -> results/production/
-
-src/diag_equilibration.jl       short-vs-long run comparison
-
-src/diag_relaxation.jl          convergence + bistability check
-
-src/analyze_production.py       summary tables + 4-panel figure
-
-src/make_main_figure.py         publication 6-panel figure
-
-results/production/             canonical dataset (means + replicates)
-
-results/diagnostics/            equilibration + relaxation evidence
-
-figures/                        figures
-
-requirements.txt                Python dependencies
 
 Project.toml / Manifest.toml    pinned Julia environment
 ## Citing this work
