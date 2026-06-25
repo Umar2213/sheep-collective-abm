@@ -3,7 +3,7 @@ message: "If you use this software, please cite it as below."
 title: "Heterogeneity in social alignment drives a continuous loss of collective order: a Vicsek-type agent-based model"
 authors:
   - given-names: Umar
-    family-names: "REPLACE_WITH_YOUR_SURNAME"
+    family-names: "Aziz"
     # orcid: "https://orcid.org/0000-0000-0000-0000"   # add if you have one
 repository-code: "https://github.com/Umar2213/sheep-collective-abm"
 license: MIT
