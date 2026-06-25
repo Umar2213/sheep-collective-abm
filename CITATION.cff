@@ -4,8 +4,7 @@ title: "Heterogeneity in social alignment drives a continuous loss of collective
 authors:
   - given-names: Umar
     family-names: "Aziz"
-    # orcid: "https://orcid.org/0000-0000-0000-0000"   # add if you have one
 repository-code: "https://github.com/Umar2213/sheep-collective-abm"
 license: MIT
 date-released: "2026-06-13"
-# doi: "10.5281/zenodo.XXXXXXX"   # add after a fresh Zenodo release of THIS version
+
