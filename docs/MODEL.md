@@ -1,80 +1,115 @@
 # Model specification
 
+## Purpose and scope
+
+This repository is an exploratory collective-motion model motivated by sheep flocking.
+It is not yet calibrated to measured sheep trajectories. The software is structured to
+separate mechanisms that are often conflated: focal responsiveness, outgoing influence,
+dyadic social relationships, metric interaction range, and update convention.
+
 ## State and units
 
-Each persistent agent has position x_i, heading θ_i and response weight w_i.
-The square has side L; positions wrap periodically. Time, distance and speed are
-simulation units with no mapping to measured sheep movement yet. Standard values
-are N=200, L=20, speed=0.03, radius=1 and dt=1. Angular noise has full width η in
-radians, sampled uniformly from [-η/2,η/2].
+Each agent i has position x_i, heading theta_i, responsiveness r_i and outgoing influence
+q_i. The square has side L with periodic boundaries. Time, distance and speed remain
+simulation units until empirical calibration is performed. Standard values are N=200,
+L=20, speed=0.03, radius=1 and dt=1. Angular noise has full width eta radians and is
+sampled uniformly from [-eta/2, eta/2].
 
-## Heading and position update
+## Interaction rule
 
-Let u(θ)=(cos θ,sin θ). For agent i, let J_i be its neighbours excluding itself.
-The new deterministic heading is the angle of
+Let u(theta)=(cos(theta), sin(theta)). For focal agent i, let J_i be metric neighbours
+within the interaction radius, excluding i. Optional directed social ties A_ij and outgoing
+influence q_j weight neighbour j. The neighbour vector is
 
-    (1-w_i) u(θ_i) + w_i mean_{j in J_i} u(θ_j).
+    v_i = sum_{j in J_i} A_ij q_j u(theta_j) / sum_{j in J_i} A_ij q_j.
 
-If J_i is empty, retain θ_i before adding noise. Add uniform angular noise,
-set velocity to speed times u(new θ_i), and move immediately by velocity times dt.
-A zero resultant uses Julia's atan convention; the physical interpretation of
-exactly opposed, balanced headings is not modelled separately.
+When no tie matrix is supplied, A_ij=1 for available neighbours. When all A_ij=1 and
+all q_j=1, the implementation reduces exactly to the unweighted baseline, which is
+covered by automated tests.
 
-Agents are activated sequentially using `Schedulers.fastest`. Later agents see
-some already-updated headings and positions. This is a deliberate preservation
-of the historical update convention, not the synchronous Vicsek rule. Scheduler
-and synchronous-update sensitivity remain required scientific controls.
+The focal deterministic direction is based on
 
-New default searches use `search=:exact`, respecting periodic Euclidean distance.
-The historical code omitted this keyword. Agents.jl 7.0.2 defaults to approximate
-searches with internal grid spacing L/20. This permits extra neighbours outside
-the nominal radius and makes the historical size comparison confounded.
+    (1-r_i) u(theta_i) + r_i v_i.
 
-The direction vectors are averaged before blending, not normalized to unit
-length first. Thus the effective strength of neighbour input also depends on
-local alignment. With k neighbours, each neighbour receives coefficient w_i/k
-and the focal agent receives 1-w_i. A fixed w does not recover equal self and
-neighbour weights for every changing k. Use a separately specified classical
-Vicsek baseline when comparing against that model.
+Thus r_i controls how strongly i responds to neighbours. q_j controls how strongly j
+contributes when observed by others. A_ij controls the pair-specific relationship from i
+to j. These quantities are deliberately distinct because they need not be identifiable
+from movement trajectories without additional constraints or independent measurements.
+A zero total neighbour weight retains the focal direction. A numerically balanced
+resultant also retains the focal direction rather than introducing atan(0,0) as an
+arbitrary global direction.
 
-## Trait distribution
+## Neighbour search
 
-For target mean μ and variance s², k=μ(1-μ)/s²-1, α=μk and β=(1-μ)k.
-For s=0 use w_i=μ. For positive s, require s²<μ(1-μ); at μ=0.7,
-s<sqrt(0.21), approximately 0.45826. Independent draws fix the population
-expectation, not a finite flock's sample mean. The traits stay fixed during a run
-(quenched variation). All random draws use the model's MersenneTwister, but a
-shared seed across different parameter values is not identical random inputs:
-Beta draws can consume different amounts of random state.
+New simulations use `search=:exact`, so interaction membership is determined by the
+periodic Euclidean metric and the stated radius. Historical output used the library's
+approximate search convention and is retained only as legacy data. Exact and approximate
+searches can still be selected explicitly for matched algorithmic controls.
 
-## Observables and uncertainty
+## Update conventions
 
-Heading order φ=norm(mean_i u(θ_i)) lies in [0,1]. A finite random group usually
-has positive φ, of order N^(-1/2); φ is not a spatial cohesion measure.
+Two update modes are implemented.
 
-Production `chi_seed` is N times the sample variance of run-average φ across
-seeds. It combines trait realizations, initial conditions, dynamical randomness
-and finite-window error. `phi_tempvar` is a within-run sample temporal variance.
-Do not label these interchangeably as a critical susceptibility.
+`sequential` retains the historical Agents.jl activation convention. Agents are activated
+one at a time using `Schedulers.fastest`, and later agents can observe already updated
+headings and positions.
 
-The legacy FSS `chi` is N times (pooled second moment minus pooled mean squared).
-The updated analysis splits it exactly into mean within-run temporal variance
-and population variance of run means. Its Binder statistic retains the historical
-factor 3 for transparency. A 2D isotropic Gaussian vector has this statistic 1/3,
-not zero. Specify the convention when comparing theory or other models.
+`synchronous` is a scientific control. All deterministic headings and noise terms are
+computed from the same pre-step state, headings are assigned together, then all agents
+move. It is not silently substituted for the sequential model. Control experiments reuse
+matched random streams across update modes.
 
-The stored FSS drift is the absolute difference of the final two quarters of the
-measurement window. A 0.02 cutoff is a screening heuristic, not a convergence
-test with calibrated error. Full autocorrelation functions, block estimates,
-effective sample sizes, longer windows and independent initial states are needed.
+## Responsiveness distribution
+
+For target mean mu and standard deviation s, positive-s responsiveness is drawn from a
+Beta distribution with
+
+    k = mu(1-mu)/s^2 - 1,
+    alpha = mu k,
+    beta  = (1-mu) k.
+
+For s=0, all agents have r_i=mu. Positive s requires s^2 < mu(1-mu). Independent draws
+fix the population expectation, not the finite-flock sample mean. Responsiveness is
+quenched within a run.
+
+## Independent random streams
+
+Trait values, initial positions/headings, and dynamical noise use separate
+`MersenneTwister` streams. The public `seed` argument remains as a backward-compatible
+base, while `trait_seed`, `init_seed` and `dynamic_seed` can be controlled independently.
+Production and finite-size experiments use crossed trait and dynamic realizations.
+Matched algorithmic controls reuse the same three seeds so differences are not driven
+by unrelated initial conditions.
+
+## Observables
+
+Heading order is
+
+    phi = norm(mean_i u(theta_i)),
+
+which lies in [0,1]. It measures directional alignment, not spatial cohesion, leadership,
+welfare or causal influence.
+
+Production output records the run mean of phi, within-run temporal variance, lag-1
+autocorrelation, an integrated-autocorrelation diagnostic, effective sample size, block
+variation, half-window drift and late-quarter drift. Finite-size output additionally
+records second and fourth moments for transparent descriptive fluctuation and Binder-like
+statistics. No single diagnostic is treated as proof of stationarity or a phase transition.
+
+## Convergence diagnostics
+
+`src/diagnostics.jl` provides autocorrelation, integrated autocorrelation time, effective
+sample size, block means and window-drift diagnostics. These are descriptive safeguards.
+Publication-quality inference requires stability across longer windows, independent
+initial conditions, adequate effective sample size and robust results across the explicit
+algorithmic controls.
 
 ## Reproducibility boundary
 
-The legacy tables have no complete per-run source/environment provenance. The
-current manifest changed after the FSS data commit. Its existence cannot identify
-the precise environment that generated earlier results. New output metadata
-records source and manifest hashes; historical hashes are not fabricated.
+Historical tables do not have complete per-run source and environment provenance, so
+none is fabricated. New runs write `run_metadata.toml` with the Git commit when available,
+Julia/platform information, experimental settings, seed design, project and manifest
+hashes, and hashes of Julia source files.
 
-The audit compares the supplied implementation with the pinned library source:
-[StandardABM defaults](https://github.com/JuliaDynamics/Agents.jl/blob/v7.0.2/src/core/model_standard.jl)
-and [continuous space searches](https://github.com/JuliaDynamics/Agents.jl/blob/v7.0.2/src/spaces/continuous.jl).
+The pinned environment currently uses Julia 1.10.5 and Agents.jl 7.0.2. Library-specific
+behaviour should be rechecked if those versions are changed.
