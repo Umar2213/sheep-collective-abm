@@ -1,11 +1,11 @@
-# diag_relaxation.jl — convergence + bistability check near the transition.
+# diag_relaxation.jl — late-window diagnostics; not a bistability test.
 include(joinpath(@__DIR__, "heterogeneous_model_v2.jl"))
 using Statistics, DataFrames, CSV, Printf
 
 const NOISE=0.5; const SIGMA_MEAN=0.7
 const SIGMA_LIST=[0.25,0.30,0.33,0.35,0.40]
 const N_AGENTS=200; const N_SEEDS=12; const N_STEPS=60000; const DECIMATE=50
-const OUTDIR=joinpath(@__DIR__,"..","results","diagnostics")
+const OUTDIR=joinpath(@__DIR__,"..","results","exact_diagnostics")
 
 function run_one(; sigma_std, seed)
     model, sv = create_sheep_model(; N=N_AGENTS, noise=NOISE,
@@ -31,6 +31,10 @@ for s in SIGMA_LIST
     push!(summ,(s,q3,q4,abs(q4-q3),std(q4v),minimum(q4v),maximum(q4v)))
 end
 CSV.write(joinpath(OUTDIR,"relaxation_summary.csv"),summ)
+# Preserve each seed: absolute differences after averaging can hide cancellation.
+per_seed = DataFrame([(sigma=r.sigma, seed=r.seed, q1=r.q1, q2=r.q2,
+    q3=r.q3, q4=r.q4, late_drift=abs(r.q4-r.q3)) for r in res])
+CSV.write(joinpath(OUTDIR,"relaxation_replicates.csv"),per_seed)
 ts=DataFrame(sigma=Float64[],seed=Int[],step=Int[],phi=Float64[])
 for s in SIGMA_LIST, sd in 1:3
     r=first(r for r in res if r.sigma==s && r.seed==sd)

@@ -1,27 +1,6 @@
-# ============================================================
-# heterogeneous_model_v2.jl
-#
-# IMPROVED VERSION — fixes the confound and adds replication.
-#
-# CHANGES from heterogeneous_model.jl:
-#
-# 1. BETA DISTRIBUTION instead of truncated Normal.
-#    The Beta distribution naturally lives in [0, 1] — no clipping,
-#    no distortion of the mean. We can set mean and variance independently.
-#    Given desired mean μ and variance v, the parameters are:
-#       α = μ × (μ(1−μ)/v − 1)
-#       β = (1−μ) × (μ(1−μ)/v − 1)
-#    (Constraint: v must be < μ(1−μ), the maximum possible variance
-#    of a distribution on [0,1] with mean μ.)
-#
-# 2. MULTIPLE SEEDS per condition (default 15).
-#    Each random seed = one possible "world". One world tells us nothing.
-#    Running many worlds and reporting mean ± standard deviation tells us
-#    whether an effect is real signal or just noise. This is how we get
-#    statistical evidence that a referee will accept.
-#
-# RUNTIME: with 6 conditions × 15 seeds = 90 runs, expect ~10–20 minutes.
-# ============================================================
+# Heterogeneous alignment-response model. See docs/MODEL.md for equations.
+# September 2026: exact radius by default; explicit approximate legacy mode.
+# Sequential updates are retained. No empirical sheep calibration is implied.
 
 using Agents
 using Distributions
@@ -32,7 +11,7 @@ using CSV
 
 
 # ─────────────────────────────────────────────────────────────
-# 1. AGENT TYPE  (unchanged)
+# 1. AGENT TYPE
 # ─────────────────────────────────────────────────────────────
 
 @agent struct SheepAgent(ContinuousAgent{2, Float64})
@@ -42,7 +21,7 @@ end
 
 
 # ─────────────────────────────────────────────────────────────
-# 2. MODEL PROPERTIES  (unchanged)
+# 2. MODEL PROPERTIES
 # ─────────────────────────────────────────────────────────────
 
 Base.@kwdef mutable struct SheepProps
@@ -50,6 +29,7 @@ Base.@kwdef mutable struct SheepProps
     noise         :: Float64         = 0.5
     radius        :: Float64         = 1.0
     dt            :: Float64         = 1.0
+    neighbor_search :: Symbol         = :exact
     σ_mean        :: Float64         = 0.7
     σ_std         :: Float64         = 0.1
     order_history :: Vector{Float64} = Float64[]
@@ -57,11 +37,11 @@ end
 
 
 # ─────────────────────────────────────────────────────────────
-# 3. AGENT STEP  (unchanged from v1)
+# 3. AGENT STEP
 # ─────────────────────────────────────────────────────────────
 
 function sheep_agent_step!(agent::SheepAgent, model)
-    neighbours = collect(nearby_agents(agent, model, model.radius))
+    neighbours = collect(nearby_agents(agent, model, model.radius; search=model.neighbor_search))
     σ = agent.social_weight
 
     if isempty(neighbours)
@@ -85,7 +65,7 @@ end
 
 
 # ─────────────────────────────────────────────────────────────
-# 4. MODEL STEP  (unchanged)
+# 4. MODEL STEP
 # ─────────────────────────────────────────────────────────────
 
 function sheep_model_step!(model)
@@ -102,15 +82,17 @@ end
 # 5. NEW: Beta distribution from desired mean and std
 # ─────────────────────────────────────────────────────────────
 
-function beta_from_mean_std(μ::Float64, s::Float64)
+function beta_from_mean_std(μ::Real, s::Real)
+    isfinite(μ) && 0 <= μ <= 1 || throw(ArgumentError("mean must be finite and in [0,1]"))
+    isfinite(s) && s >= 0 || throw(ArgumentError("std must be finite and nonnegative"))
     v = s^2
     if v <= 0.0
         return nothing       # caller treats this as "homogeneous"
     end
     max_v = μ * (1 - μ)
     if v >= max_v
-        error("Requested variance $(round(v;digits=4)) exceeds max " *
-              "possible $(round(max_v;digits=4)) for mean $(μ).")
+        throw(ArgumentError("Requested variance $(round(v;digits=4)) exceeds max " *
+              "possible $(round(max_v;digits=4)) for mean $(μ)."))
     end
     common = μ * (1 - μ) / v - 1
     α = μ       * common
@@ -124,14 +106,23 @@ end
 # ─────────────────────────────────────────────────────────────
 
 function create_sheep_model(; N=200, L=20.0, speed=0.03, noise=0.5,
-                            radius=1.0, dt=1.0,
+                            radius=1.0, dt=1.0, neighbor_search=:exact,
                             σ_mean=0.7, σ_std=0.1, seed=42)
+    N isa Integer && N >= 1 || throw(ArgumentError("N must be a positive integer"))
+    for (name, value) in ((:L,L), (:speed,speed), (:radius,radius), (:dt,dt))
+        isfinite(value) && value > 0 || throw(ArgumentError("$name must be finite and positive"))
+    end
+    isfinite(noise) && noise >= 0 || throw(ArgumentError("noise must be finite and nonnegative"))
+    neighbor_search in (:exact, :approximate) || throw(ArgumentError("neighbor_search must be :exact or :approximate"))
     space = ContinuousSpace((L, L); periodic = true)
     props = SheepProps(speed=speed, noise=noise, radius=radius,
-                       dt=dt, σ_mean=σ_mean, σ_std=σ_std)
+                       dt=dt, neighbor_search=neighbor_search, σ_mean=σ_mean, σ_std=σ_std)
     model = StandardABM(
         SheepAgent, space;
         properties  = props,
+        # Explicitly retain the historical sequential, in-place update convention.
+        scheduler   = Schedulers.fastest,
+        agents_first = true,
         agent_step! = sheep_agent_step!,
         model_step! = sheep_model_step!,
         rng         = MersenneTwister(seed)
@@ -161,6 +152,7 @@ end
 
 function run_single_seed(; σ_mean, σ_std, seed, n_steps=500, N=200,
                          L=20.0, speed=0.03, noise=0.5, radius=1.0)
+    n_steps isa Integer && n_steps >= 100 || throw(ArgumentError("n_steps must be an integer >= 100"))
     model, σ_values = create_sheep_model(;
         N=N, L=L, speed=speed, noise=noise, radius=radius,
         σ_mean=σ_mean, σ_std=σ_std, seed=seed
@@ -181,6 +173,7 @@ end
 # ─────────────────────────────────────────────────────────────
 
 function run_condition(; σ_mean, σ_std, n_seeds=15, n_steps=500, noise=0.5)
+    n_seeds isa Integer && n_seeds >= 2 || throw(ArgumentError("n_seeds must be an integer >= 2"))
     φ_values   = Float64[]
     σmean_vals = Float64[]
     σstd_vals  = Float64[]
@@ -209,17 +202,17 @@ end
 function run_experiment(; σ_mean=0.7,
                         σ_std_list=[0.0, 0.05, 0.10, 0.15, 0.20, 0.25],
                         n_seeds=15, n_steps=500, noise=0.5,
-                        output_dir="/home/umar/sheep_collective/results",
+                        output_dir=joinpath(@__DIR__, "..", "results", "pilot"),
                         label="experiment")
 
     println("=" ^ 64)
-    println("  $(label) — effect of σ_std on flock cohesion φ")
+    println("  $(label) — effect of σ_std on heading order φ")
     println()
     println("  Fixed:    σ_mean = $(σ_mean),  noise = $(noise),  N = 200")
     println("  Varying:  σ_std  = $(σ_std_list)")
     println("  Per cond: $(n_seeds) seeds, $(n_steps) steps each")
     println()
-    println("  Beta distribution → no truncation, mean is preserved exactly.")
+    println("  Beta distribution → no truncation, distribution mean is fixed; finite-sample means fluctuate.")
     println("=" ^ 64)
     println()
 
@@ -289,7 +282,8 @@ end
 # 10. RUN IT  (only when executed directly, not on include())
 # ─────────────────────────────────────────────────────────────
 
-if abspath(PROGRAM_FILE) == @__FILE__
+if abspath(PROGRAM_FILE) == abspath(@__FILE__)
+    @warn "500-step pilot only: these outputs do not establish stationarity."
     run_experiment(
         σ_mean      = 0.7,
         σ_std_list  = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25],

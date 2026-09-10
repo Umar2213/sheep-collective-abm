@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "Heterogeneity in social alignment drives a continuous loss of collective order: a Vicsek-type agent-based model"
+title: "Sheep collective ABM: heterogeneous alignment-response simulations"
 authors:
   - given-names: Umar
     family-names: "Aziz"

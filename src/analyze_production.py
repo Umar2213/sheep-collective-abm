@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-# analyze_production.py — honest analysis of the canonical equilibrated sweep.
+# analyze_production.py — analysis of stored production simulations.
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
+import os
+from analysis_utils import level_crossing
 
 ROOT = Path(__file__).resolve().parent.parent
-PROD = ROOT/"results"/"production"; FIGS = ROOT/"figures"; FIGS.mkdir(exist_ok=True)
+PROD = Path(os.environ.get("ABM_ANALYSIS_DIR", ROOT/"results"/"production"))
+FIGS = Path(os.environ.get("ABM_FIGURE_DIR", ROOT/"figures")); FIGS.mkdir(parents=True, exist_ok=True)
 rep  = pd.read_csv(PROD/"sweep_replicates.csv")
 summ = pd.read_csv(PROD/"sweep_condition_means.csv")
 noises = sorted(summ.noise.unique())
@@ -33,32 +36,31 @@ ax[0,0].set_title("(a) Order declines smoothly with dispersion"); ax[0,0].legend
 for e in noises:
     d = summ[summ.noise==e].sort_values("sigma_std")
     ax[0,1].plot(d.sigma_std, d.chi_seed, "-o", ms=3, color=colors.get(e,"k"), label=f"η = {e}")
-ax[0,1].set_xlabel("trait dispersion  σ"); ax[0,1].set_ylabel("susceptibility  χ = N·Var(φ)")
-ax[0,1].set_title("(b) Fluctuations peak in the transition region"); ax[0,1].legend(frameon=False)
+ax[0,1].set_xlabel("trait dispersion  σ"); ax[0,1].set_ylabel("between-run variance  N·Var(mean φ)")
+ax[0,1].set_title("(b) Between-run variability"); ax[0,1].legend(frameon=False)
 
 for e in noises:
     d = summ[summ.noise==e].sort_values("sigma_std")
     ax[1,0].plot(d.sigma_std, d.ar1, "-o", ms=3, color=colors.get(e,"k"), label=f"η = {e}")
 ax[1,0].set_xlabel("trait dispersion  σ"); ax[1,0].set_ylabel("lag-1 autocorrelation")
-ax[1,0].set_title("(c) Critical slowing down approaching disorder"); ax[1,0].legend(frameon=False)
+ax[1,0].set_title("(c) Temporal persistence"); ax[1,0].legend(frameon=False)
 
 d5 = summ[summ.noise==0.5].sort_values("sigma_std")
-ax[1,1].plot(d5.sigma_std, 100*d5.frac_lo, "-o", ms=3, color="#cb181d", label="weakly social (w<0.2)")
-ax[1,1].plot(d5.sigma_std, 100*d5.frac_hi, "-s", ms=3, color="#238b45", label="strongly social (w>0.8)")
+ax[1,1].plot(d5.sigma_std, 100*d5.frac_lo, "-o", ms=3, color="#cb181d", label="low response (w<0.2)")
+ax[1,1].plot(d5.sigma_std, 100*d5.frac_hi, "-s", ms=3, color="#238b45", label="high response (w>0.8)")
 ax[1,1].set_xlabel("trait dispersion  σ"); ax[1,1].set_ylabel("% of population (η=0.5)")
-ax[1,1].set_title("(d) Mechanism: dispersion grows the asocial tail"); ax[1,1].legend(frameon=False)
+ax[1,1].set_title("(d) Dispersion increases the low-response tail"); ax[1,1].legend(frameon=False)
 
 for a in ax.flat: a.grid(alpha=0.25)
-fig.tight_layout()
+fig.suptitle(os.environ.get("ABM_DATA_LABEL", "Legacy approximate-search results, pending exact-radius rerun"), fontsize=11)
+fig.tight_layout(rect=[0,0,1,.96])
 fig.savefig(FIGS/"fig_main_production.png", dpi=200); fig.savefig(FIGS/"fig_main_production.pdf")
 print("  wrote figures/fig_main_production.png + .pdf")
 
-def crossing(d, level):
-    d = d.sort_values("sigma_std"); x, y = d.sigma_std.values, d.phi_mean.values
-    for i in range(len(y)-1):
-        if y[i] >= level >= y[i+1]:
-            t = (y[i]-level)/(y[i]-y[i+1]); return x[i] + t*(x[i+1]-x[i])
-    return np.nan
+def crossing(d, level=0.90):
+    d = d.sort_values("sigma_std")
+    return level_crossing(d.sigma_std, d.phi_mean, level)
+
 
 print("\n  noise | sigma@phi=0.90 | sigma@phi=0.50 | chi peak @ sigma | max chi")
 print("  " + "-"*62)
