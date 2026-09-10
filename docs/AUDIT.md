@@ -88,7 +88,7 @@ direct dependency coverage but not regenerated or runtime-validated locally.
 
 ## Research conclusion
 
-Relevant to ARC preparation: yes. All correct before the audit: no. Demonstrated
-novel, sheep-validated contribution: no. The strongest route forward is a clear
+The repository is useful exploratory research software, but it does not yet establish
+a novel, sheep-validated contribution. The strongest route forward is a clear
 mechanistic and predictive comparison using measured individual differences and
-social ties. See [the research development plan](ARC_RESEARCH_PLAN.md).
+social ties. See [the research development plan](RESEARCH_PLAN.md).
