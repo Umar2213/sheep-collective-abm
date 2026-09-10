@@ -72,7 +72,16 @@ not newly executed simulations.
 
 Julia is not installed in the audit environment. A network request to obtain it
 was blocked before approval completed. The Julia unit, parse and smoke checks are
-provided in CI but local execution was unavailable. Full production/FSS reruns,
+provided in CI but local execution was unavailable.
+
+Subsequent GitHub validation **passed** for implementation commit
+`533f5aa385c1a0710c171931904dfb7db215f88a`: Julia 1.10.5 environment
+instantiation, all Julia parse/unit tests, both production and FSS smoke runs,
+and the complete Python checks.
+[Successful workflow](https://github.com/Umar2213/sheep-collective-abm/actions/runs/34454578947).
+This documentation-only update records that result.
+
+Full production/FSS reruns,
 empirical model validation and definitive novelty assessment remain outstanding.
 The manifest records Julia 1.10.5 and Agents.jl 7.0.2; it was parsed and checked for
 direct dependency coverage but not regenerated or runtime-validated locally.
