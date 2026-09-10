@@ -16,6 +16,7 @@ proposed mechanism has been tested against empirical sheep trajectories.
 | Sheep collective motion with alternating leadership | Gómez-Nava, Bon & Peruani, 2022, Nature Physics, DOI: 10.1038/s41567-022-01769-8 | Sheep can show intermittent motion with temporal leaders and strongly directed interaction structure, so leadership itself is not a new claim. |
 | High-resolution sheep tracking for leadership and social networks | Maroto-Molina et al., 2021, Sensors, PMID: 33573163 | RTK/GNSS data can quantify sheep movement leaders and association networks. |
 | Directional information flow in sheep under herding pressure | Communications Biology, 2024, DOI: 10.1038/s42003-024-07245-8 | Position-dependent directional influence and data-driven ABMs have already been applied to sheep. |
+| Collective motion without an explicit alignment rule | Allocentric flocking, Nature Communications, 2025, DOI: 10.1038/s41467-025-64676-5 | Explicit heading alignment is not the only plausible mechanism. Empirical work should compare the proposed interaction rule against simpler or alternative behavioural kernels. |
 | Sheep movement initiation and following | Earlier experimental work on collective departures and spontaneous movements | Social context, recruitment and leader/follower behaviour have already been quantified experimentally. |
 
 ## Candidate contribution that remains worth testing
@@ -46,6 +47,11 @@ the components are identifiable from the available data.
 M4 must not be used merely because it is more complex. If q_j and A_ij cannot be
 recovered separately, q_j should remain fixed.
 
+A later empirical comparison should also include at least one plausible movement kernel
+that does not assume explicit velocity alignment when the data can distinguish the
+mechanisms. This guards against attributing predictive improvement to a flexible but
+biologically incorrect interaction rule.
+
 ## Evidence required before claiming a contribution
 
 A strong paper should demonstrate all of the following:
@@ -59,6 +65,7 @@ A strong paper should demonstrate all of the following:
   avoid circularity;
 - predictive gains are reported against homogeneous, proximity-only and shuffled-network
   baselines;
+- at least one plausible alternative movement kernel is tested where data permit;
 - uncertainty is calculated at the independent animal-group/day/bout level;
 - biological interpretation is separated from purely computational effects.
 
@@ -72,8 +79,9 @@ that a fixed-mean Beta dispersion sweep is itself biologically novel.
 
 A potentially publishable gap is the lack of a validated framework that explicitly
 separates individual responsiveness, partner-specific social weighting and outgoing
-influence, then tests their identifiable and out-of-sample predictive contributions in
-sheep movement data under matched computational controls.
+influence, tests their identifiability, and evaluates their out-of-sample predictive
+contributions in sheep movement data against matched computational and behavioural
+baselines.
 
 This remains a hypothesis about the literature gap. It must be re-evaluated before
 manuscript submission with a focused systematic search.
