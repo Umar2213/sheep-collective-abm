@@ -2,11 +2,13 @@
 # Matched controls for two implementation choices that can materially change the
 # scientific interpretation: neighbour search and update convention.
 # The same trait, initial-state and dynamic random seeds are reused across controls.
+# Large grids can be split by complete (sigma, noise) base conditions.
 # Run: julia --project=. --threads=auto src/control_sweep.jl
 
 include(joinpath(@__DIR__, "heterogeneous_model_v2.jl"))
 include(joinpath(@__DIR__, "diagnostics.jl"))
 include(joinpath(@__DIR__, "run_metadata.jl"))
+include(joinpath(@__DIR__, "sharding.jl"))
 using Statistics, DataFrames, CSV, Printf
 
 const SMOKE = get(ENV, "ABM_SMOKE", "0") == "1"
@@ -21,8 +23,10 @@ const N_DYNAMIC_REPS = SMOKE ? 1 : 3
 const N_TOTAL = SMOKE ? 160 : 60000
 const N_WARMUP = SMOKE ? 80 : 30000
 const N_BLOCKS = SMOKE ? 4 : 8
-const OUTDIR = get(ENV, "ABM_OUTPUT_DIR",
+const SHARD = shard_spec()
+const BASE_OUTDIR = get(ENV, "ABM_OUTPUT_DIR",
     joinpath(@__DIR__, "..", "results", SMOKE ? "smoke_controls" : "algorithmic_controls"))
+const OUTDIR = shard_dir(BASE_OUTDIR, SHARD)
 
 trait_seed(rep) = 210_000 + rep
 init_seed(rep) = 220_000 + rep
@@ -64,13 +68,16 @@ function run_control(; sigma_std, noise, search_mode, update_mode, trait_rep, dy
     )
 end
 
+all_base_conditions = [(s, e) for s in SIGMA_LIST for e in NOISE_LIST]
+base_conditions = select_shard(all_base_conditions, SHARD)
 jobs = [(s, e, search, update, tr, dr)
-        for s in SIGMA_LIST for e in NOISE_LIST
+        for (s, e) in base_conditions
         for search in SEARCH_MODES for update in UPDATE_MODES
         for tr in 1:N_TRAIT_REPS for dr in 1:N_DYNAMIC_REPS]
 res = Vector{Any}(undef, length(jobs))
 println("controls: $(length(jobs)) matched runs × $N_TOTAL steps")
 println("search=$(SEARCH_MODES), update=$(UPDATE_MODES)")
+println("shard $(SHARD.index)/$(SHARD.count): $(length(base_conditions))/$(length(all_base_conditions)) base conditions")
 
 done = Threads.Atomic{Int}(0)
 Threads.@threads :dynamic for i in eachindex(jobs)
@@ -97,6 +104,12 @@ write_run_metadata(OUTDIR;
     warmup=N_WARMUP,
     diagnostic_blocks=N_BLOCKS,
     smoke=SMOKE,
+    shard_index=SHARD.index,
+    shard_count=SHARD.count,
+    full_condition_count=length(all_base_conditions),
+    shard_condition_count=length(base_conditions),
+    full_run_count=length(all_base_conditions) * length(SEARCH_MODES) * length(UPDATE_MODES) * N_TRAIT_REPS * N_DYNAMIC_REPS,
+    shard_run_count=length(jobs),
     seed_design="matched across controls: trait=210000+trait_rep; init=220000+dynamic_rep; dynamic=230000+dynamic_rep")
 
 summary = combine(groupby(raw, [:sigma_std, :noise, :search_mode, :update_mode])) do sub
