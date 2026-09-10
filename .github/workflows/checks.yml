@@ -31,3 +31,6 @@ jobs:
       - run: julia --project=. --threads=2 src/fss_sweep.jl
         env:
           ABM_SMOKE: '1'
+      - run: julia --project=. --threads=2 src/control_sweep.jl
+        env:
+          ABM_SMOKE: '1'
