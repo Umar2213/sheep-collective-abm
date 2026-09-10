@@ -33,6 +33,38 @@ EXPERIMENTS = {
             "trait_rep", "dynamic_rep",
         ],
         "condition_keys": ["sigma_std", "noise", "search_mode", "update_mode"],
+        "supplemental": [
+            {
+                "file": "paired_control_effects.csv",
+                "keys": ["sigma_std", "noise", "trait_rep", "dynamic_rep", "control"],
+                "rows": lambda m: int(m["full_condition_count"]) * int(m["trait_replicates"]) * int(m["dynamic_replicates"]) * 2,
+            },
+            {
+                "file": "paired_control_summary.csv",
+                "keys": ["sigma_std", "noise", "control"],
+                "rows": lambda m: int(m["full_condition_count"]) * 2,
+            },
+        ],
+    },
+    "distribution_controls": {
+        "replicate_file": "distribution_replicates.csv",
+        "summary_file": "distribution_condition_means.csv",
+        "replicate_keys": [
+            "sigma_std", "noise", "trait_distribution", "trait_rep", "dynamic_rep",
+        ],
+        "condition_keys": ["sigma_std", "noise", "trait_distribution"],
+        "supplemental": [
+            {
+                "file": "paired_distribution_effects.csv",
+                "keys": ["sigma_std", "noise", "trait_rep", "dynamic_rep"],
+                "rows": lambda m: int(m["full_condition_count"]) * int(m["trait_replicates"]) * int(m["dynamic_replicates"]),
+            },
+            {
+                "file": "paired_distribution_summary.csv",
+                "keys": ["sigma_std", "noise"],
+                "rows": lambda m: int(m["full_condition_count"]),
+            },
+        ],
     },
 }
 
@@ -48,6 +80,47 @@ def _check_columns(frame: pd.DataFrame, required: list[str], source: Path) -> No
     missing = [c for c in required if c not in frame.columns]
     if missing:
         raise ValueError(f"{source} is missing required columns: {missing}")
+
+
+def _validate_metadata_consistency(metadata: list[dict]) -> None:
+    """Reject shard sets produced from materially different experiment definitions."""
+    ignored = {
+        "shard_index", "shard_condition_count", "shard_run_count",
+        "timestamp_utc", "hostname", "julia_threads",
+    }
+    reference = {k: v for k, v in metadata[0].items() if k not in ignored}
+    for idx, meta in enumerate(metadata[1:], start=2):
+        current = {k: v for k, v in meta.items() if k not in ignored}
+        if current != reference:
+            differing = sorted(k for k in set(reference) | set(current) if reference.get(k) != current.get(k))
+            raise ValueError(f"Shard metadata are inconsistent, shard {idx} differs in: {differing}")
+
+
+def _merge_supplemental(shard_dirs, metadata, specs, output: Path) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    first_meta = metadata[0]
+    for spec in specs:
+        frames = []
+        filename = spec["file"]
+        for _, _, directory in shard_dirs:
+            path = directory / filename
+            if not path.exists():
+                raise ValueError(f"Missing required shard file: {path}")
+            frame = pd.read_csv(path)
+            _check_columns(frame, spec["keys"], path)
+            frames.append(frame)
+        merged = pd.concat(frames, ignore_index=True)
+        dup = merged.duplicated(spec["keys"], keep=False)
+        if dup.any():
+            examples = merged.loc[dup, spec["keys"]].head(5).to_dict("records")
+            raise ValueError(f"Duplicate keys found in {filename}, examples: {examples}")
+        expected = int(spec["rows"](first_meta))
+        if len(merged) != expected:
+            raise ValueError(f"Merged {len(merged)} rows in {filename}, expected {expected}")
+        merged = merged.sort_values(spec["keys"]).reset_index(drop=True)
+        merged.to_csv(output / filename, index=False)
+        counts[filename] = len(merged)
+    return counts
 
 
 def merge_shards(root: Path, experiment: str, output: Path | None = None) -> dict:
@@ -103,6 +176,7 @@ def merge_shards(root: Path, experiment: str, output: Path | None = None) -> dic
         replicate_frames.append(rep)
         summary_frames.append(summ)
 
+    _validate_metadata_consistency(metadata)
     full_run_counts = {int(m["full_run_count"]) for m in metadata}
     full_condition_counts = {int(m["full_condition_count"]) for m in metadata}
     if len(full_run_counts) != 1 or len(full_condition_counts) != 1:
@@ -125,10 +199,11 @@ def merge_shards(root: Path, experiment: str, output: Path | None = None) -> dic
         examples = summaries.loc[duplicate_conditions, cfg["condition_keys"]].head(5).to_dict("records")
         raise ValueError(f"Duplicate condition summaries found, examples: {examples}")
 
-    # Control summaries have four algorithmic variants per base (sigma, noise) condition.
     expected_summary_rows = expected_base_conditions
     if experiment == "algorithmic_controls":
         expected_summary_rows *= len(metadata[0]["search_modes"]) * len(metadata[0]["update_modes"])
+    elif experiment == "distribution_controls":
+        expected_summary_rows *= len(metadata[0]["trait_families"])
     if len(summaries) != expected_summary_rows:
         raise ValueError(
             f"Merged {len(summaries)} condition-summary rows, expected {expected_summary_rows}"
@@ -143,12 +218,17 @@ def merge_shards(root: Path, experiment: str, output: Path | None = None) -> dic
     reps.to_csv(rep_out, index=False)
     summaries.to_csv(summary_out, index=False)
 
+    supplemental_counts = _merge_supplemental(
+        shard_dirs, metadata, cfg.get("supplemental", []), output
+    )
+
     report = {
         "experiment": experiment,
         "source_root": str(root),
         "shard_count": shard_count,
         "replicate_rows": len(reps),
         "condition_summary_rows": len(summaries),
+        "supplemental_rows": supplemental_counts,
         "replicate_keys": cfg["replicate_keys"],
         "condition_keys": cfg["condition_keys"],
         "source_directories": [str(d) for _, _, d in shard_dirs],
