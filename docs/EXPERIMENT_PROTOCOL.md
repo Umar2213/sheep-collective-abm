@@ -119,6 +119,20 @@ julia --project=. --threads=auto src/fss_sweep.jl
 julia --project=. --threads=auto src/control_sweep.jl
 ```
 
-Full experiments are computationally expensive and should be run on appropriate compute
-resources. GitHub Actions is used for software verification and smoke runs, not as a
-substitute for the full scientific experiment.
+## Compute boundary
+
+The default full design contains thousands of long independent simulation runs, including
+N up to 1600 in the finite-size experiment. GitHub Actions is intentionally restricted to
+small smoke experiments because hosted CI is for software verification, not for consuming
+large amounts of scientific compute. The full sweeps should be run on a workstation,
+cluster or other compute resource where wall time, memory and job interruption can be
+managed explicitly.
+
+Before launching the complete grid, benchmark representative N=200 and N=1600 conditions.
+Use those timings to choose a realistic parallelization strategy. If the design is split
+over multiple jobs, every job must use unique output paths and metadata, and all parts must
+be checked for duplicate or missing condition and replicate keys before aggregation.
+
+A failed or interrupted large run must not be silently treated as complete. Scientific
+summaries should be generated only after the expected condition and replicate keys have
+been verified.
