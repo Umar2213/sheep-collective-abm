@@ -1,11 +1,13 @@
 # production_sweep.jl
 # Corrected exact-radius production experiment with crossed trait and dynamic
 # realizations, explicit random streams, and per-run convergence diagnostics.
+# Large grids can be split by complete conditions with ABM_SHARD_INDEX/COUNT.
 # Run: julia --project=. --threads=auto src/production_sweep.jl
 
 include(joinpath(@__DIR__, "heterogeneous_model_v2.jl"))
 include(joinpath(@__DIR__, "diagnostics.jl"))
 include(joinpath(@__DIR__, "run_metadata.jl"))
+include(joinpath(@__DIR__, "sharding.jl"))
 using Statistics, DataFrames, CSV, Printf
 
 const SIGMA_MEAN = 0.7
@@ -20,9 +22,11 @@ const N_DYNAMIC_REPS = SMOKE ? 1 : 4
 const N_TOTAL = SMOKE ? 160 : 60000
 const N_WARMUP = SMOKE ? 80 : 30000
 const N_BLOCKS = SMOKE ? 4 : 8
-const OUTDIR = get(ENV, "ABM_OUTPUT_DIR",
+const SHARD = shard_spec()
+const BASE_OUTDIR = get(ENV, "ABM_OUTPUT_DIR",
     joinpath(@__DIR__, "..", "results", SMOKE ? "smoke_production" :
              string(NEIGHBOR_SEARCH, "_", UPDATE_MODE, "_production")))
+const OUTDIR = shard_dir(BASE_OUTDIR, SHARD)
 
 trait_seed(rep) = 10_000 + rep
 init_seed(rep) = 20_000 + rep
@@ -66,11 +70,14 @@ function run_one(; sigma_std, noise, trait_rep, dynamic_rep)
     )
 end
 
-jobs = [(s, e, tr, dr) for s in SIGMA_LIST for e in NOISE_LIST
+all_conditions = [(s, e) for s in SIGMA_LIST for e in NOISE_LIST]
+conditions = select_shard(all_conditions, SHARD)
+jobs = [(s, e, tr, dr) for (s, e) in conditions
         for tr in 1:N_TRAIT_REPS for dr in 1:N_DYNAMIC_REPS]
 res = Vector{Any}(undef, length(jobs))
 println("production: $(length(jobs)) runs × $N_TOTAL steps, search=$NEIGHBOR_SEARCH, update=$UPDATE_MODE")
 println("crossed design: $N_TRAIT_REPS trait realizations × $N_DYNAMIC_REPS dynamic realizations")
+println("shard $(SHARD.index)/$(SHARD.count): $(length(conditions))/$(length(all_conditions)) complete conditions")
 
 done = Threads.Atomic{Int}(0)
 Threads.@threads :dynamic for i in eachindex(jobs)
@@ -96,6 +103,12 @@ write_run_metadata(OUTDIR;
     smoke=SMOKE,
     neighbor_search=string(NEIGHBOR_SEARCH),
     update_mode=string(UPDATE_MODE),
+    shard_index=SHARD.index,
+    shard_count=SHARD.count,
+    full_condition_count=length(all_conditions),
+    shard_condition_count=length(conditions),
+    full_run_count=length(all_conditions) * N_TRAIT_REPS * N_DYNAMIC_REPS,
+    shard_run_count=length(jobs),
     seed_design="trait=10000+trait_rep; init=20000+dynamic_rep; dynamic=30000+dynamic_rep")
 CSV.write(joinpath(OUTDIR, "sweep_replicates.csv"), raw)
 
@@ -127,7 +140,7 @@ summ = combine(groupby(raw, [:noise, :sigma_std]), summarize_condition)
 sort!(summ, [:noise, :sigma_std])
 CSV.write(joinpath(OUTDIR, "sweep_condition_means.csv"), summ)
 
-println("\n  η=0.5 summary:")
+println("\n  available eta=0.5 conditions in this shard:")
 println("  sigma | phi_mean | sd     | median tau | min ESS | max late drift")
 println("  " * "-"^72)
 for row in eachrow(summ[summ.noise .== 0.5, :])
