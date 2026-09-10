@@ -46,3 +46,7 @@ jobs:
       - run: julia --project=. --threads=2 src/control_sweep.jl
         env:
           ABM_SMOKE: '1'
+      - run: julia --project=. src/benchmark_compute.jl
+        env:
+          ABM_BENCHMARK_N: '12'
+          ABM_BENCHMARK_STEPS: '20'
