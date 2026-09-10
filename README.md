@@ -36,6 +36,8 @@ Additional safeguards now include:
 - crossed trait and dynamic realizations in corrected production and finite-size sweeps;
 - per-run autocorrelation, effective-sample-size, block and window-drift diagnostics;
 - matched exact-versus-approximate and sequential-versus-synchronous control experiments;
+- deterministic condition-level sharding for distributed full runs;
+- verified shard aggregation that rejects missing shards and duplicate replicate keys;
 - source, environment, seed-design and hash metadata for new simulation output.
 
 `phi` is heading order only. It is not a spatial-cohesion, leadership, welfare or causal-
@@ -91,9 +93,29 @@ realizations. The finite-size experiment uses N=100 to 1600 at fixed density wit
 crossed design. The matched control experiment reuses the same trait, initialization and
 dynamical seeds across neighbour-search and update conventions.
 
-Full runs are computationally expensive and should be performed on appropriate compute
-resources. New outputs are kept separate from the historical tables and include
-`run_metadata.toml` provenance information.
+Full runs are computationally expensive. Each entry point can therefore be split over
+multiple independent compute tasks. Sharding is by complete scientific conditions, so all
+replicates for a condition stay together. For example, an eight-part production run can be
+launched as separate tasks using:
+
+```bash
+ABM_SHARD_COUNT=8 ABM_SHARD_INDEX=1 julia --project=. --threads=auto src/production_sweep.jl
+# repeat with ABM_SHARD_INDEX=2 through 8 on separate compute tasks
+```
+
+With the default output path this produces `shard_001_of_008` through
+`shard_008_of_008`. After every shard finishes, merge only after integrity checks pass:
+
+```bash
+python src/merge_shards.py --experiment production --root results/exact_sequential_production
+python src/merge_shards.py --experiment finite_size --root results/exact_sequential_fss
+python src/merge_shards.py --experiment algorithmic_controls --root results/algorithmic_controls
+```
+
+The merger rejects missing shards, inconsistent metadata, duplicate replicate keys and
+incorrect total row counts before writing a `merged/` dataset and `merge_report.json`.
+New outputs are kept separate from the historical tables and include `run_metadata.toml`
+provenance information.
 
 ## Candidate research contribution
 
@@ -104,7 +126,7 @@ the literature. They are therefore not treated as the project's novelty.
 The stronger candidate question is whether **individual responsiveness, partner-specific
 social weighting and outgoing influence can be separated mechanistically and statistically,
 and whether doing so improves held-out prediction of sheep movement beyond simpler nested
-models**. The planned hierarchy is:
+and alternative behavioural models**. The planned hierarchy is:
 
 | Model | Responsiveness | Dyadic ties | Outgoing influence |
 |---|---|---|---|
@@ -115,9 +137,10 @@ models**. The planned hierarchy is:
 | M4 | individual | measured/estimated | estimated only if identifiable |
 
 A future empirical study should use complete held-out groups, days or movement bouts,
-independently estimated social ties, parameter-recovery tests, and proximity-only and
-shuffled-network controls. See [NOVELTY_MATRIX.md](docs/NOVELTY_MATRIX.md) for the evidence
-required before making a novelty claim.
+independently estimated social ties, parameter-recovery tests, proximity-only and
+shuffled-network controls, and where data permit at least one alternative movement kernel
+that does not assume explicit velocity alignment. See [NOVELTY_MATRIX.md](docs/NOVELTY_MATRIX.md)
+for the evidence required before making a novelty claim.
 
 ## Citation and license
 
