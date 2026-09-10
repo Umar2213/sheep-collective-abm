@@ -6,6 +6,13 @@ This protocol defines the computational evidence required before the corrected m
 used for scientific claims. It is written before full corrected sweeps are interpreted so
 that convergence and robustness criteria are not chosen after seeing the results.
 
+## Current status
+
+The software-verification stage has been exercised in GitHub Actions, including Julia and
+Python tests plus smoke production, finite-size and matched-control experiments. Full
+scientific sweeps have not yet been run and no corrected scientific result is inferred from
+the smoke data.
+
 ## Stage 1, software verification
 
 Required before any full experiment:
