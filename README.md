@@ -4,11 +4,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Julia 1.10.5](https://img.shields.io/badge/Julia-1.10.5-9558B2.svg)](https://julialang.org/)
 
-A Julia simulation scaffold for investigating how individual differences in
-alignment response affect collective heading order. It is relevant preliminary
-work for the sheep component of ARC DP260101231, **How individual variation drives
-collective motion**. It is not an empirically validated sheep model or an official
-project deliverable, and novelty has not been established.
+Research software for investigating how individual differences in alignment
+response affect collective heading order in a sheep-inspired agent-based model.
+The current model is computational and exploratory. It is not yet calibrated or
+validated against measured sheep trajectories, and novelty has not been established.
 
 **September 2026 audit:** the historical production script was corrupted by pasted
 shell text. More substantially, historical neighbour searches used the library's
@@ -16,7 +15,7 @@ approximate radius, whose grid spacing increases with box size. New simulations
 now use exact-radius searches. Stored results and the figures below describe the
 **legacy approximate-search model**, and must not be presented as results of the
 corrected model. See [the audit](docs/AUDIT.md), [model specification](docs/MODEL.md)
-and [ARC research plan](docs/ARC_RESEARCH_PLAN.md).
+and [research plan](docs/RESEARCH_PLAN.md).
 
 ## What is implemented
 
@@ -28,7 +27,7 @@ and [ARC research plan](docs/ARC_RESEARCH_PLAN.md).
 - Updates are sequential and in place, using `Schedulers.fastest`, rather than
   synchronous classical Vicsek updates. Exact metric neighbours exclude the focal agent.
 - φ measures heading alignment, not spatial cohesion, leadership or welfare.
-- No recognition network, hunger state, GPS calibration or locust model is implemented.
+- No empirically estimated social network or GPS calibration is implemented.
 
 The Beta **distribution** mean is fixed. Realized group means fluctuate, ranging
 from 0.6428 to 0.7546 in the stored production runs. Increasing σ changes the entire
@@ -120,12 +119,12 @@ The 500-step direct invocation of `heterogeneous_model_v2.jl` is only a pilot.
 
 The priority is a comparison of homogeneous response, heterogeneous response,
 recognised social ties, and their combination, evaluated on held-out sheep
-trajectories. A successful new contribution would explain when measured social
+trajectories. A successful contribution would explain when measured social
 relationships and individual states improve prediction beyond simpler baselines.
-See the [specific hypotheses, controls and data requirements](docs/ARC_RESEARCH_PLAN.md).
+See the [specific hypotheses, controls and data requirements](docs/RESEARCH_PLAN.md).
 
 Related work already studies heterogeneous social networks, individualistic motion
-and differential leadership. See [prior research](docs/ARC_RESEARCH_PLAN.md#prior-research).
+and differential leadership. See [prior research](docs/RESEARCH_PLAN.md#prior-research).
 A Beta sweep by itself does not establish novelty.
 
 See `CITATION.cff` for software citation and `LICENSE` for the MIT license.
