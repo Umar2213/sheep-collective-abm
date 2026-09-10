@@ -1,6 +1,10 @@
 name: Scientific simulation benchmark
 
 on:
+  push:
+    branches: [ops/one-time-benchmark]
+    paths:
+      - '.github/workflows/benchmark.yml'
   workflow_dispatch:
     inputs:
       n_agents:
@@ -47,7 +51,38 @@ permissions:
   contents: read
 
 jobs:
-  benchmark:
+  calibration:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        n_agents: ['200', '1600']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10.5'
+      - uses: julia-actions/cache@v2
+      - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Run calibration benchmark
+        env:
+          ABM_BENCHMARK_N: ${{ matrix.n_agents }}
+          ABM_BENCHMARK_STEPS: '1000'
+          ABM_BENCHMARK_SIGMA: '0.30'
+          ABM_BENCHMARK_NOISE: '0.5'
+          ABM_NEIGHBOR_SEARCH: exact
+          ABM_UPDATE_MODE: sequential
+        run: julia --project=. src/benchmark_compute.jl | tee benchmark.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: calibration-benchmark-N${{ matrix.n_agents }}
+          path: benchmark.txt
+          retention-days: 30
+
+  manual:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -57,7 +92,7 @@ jobs:
           version: '1.10.5'
       - uses: julia-actions/cache@v2
       - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
-      - name: Run benchmark
+      - name: Run requested benchmark
         env:
           ABM_BENCHMARK_N: ${{ inputs.n_agents }}
           ABM_BENCHMARK_STEPS: ${{ inputs.timed_steps }}
