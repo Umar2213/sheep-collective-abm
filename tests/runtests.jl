@@ -11,6 +11,7 @@ end
 
 include(joinpath(@__DIR__, "..", "src", "heterogeneous_model_v2.jl"))
 include(joinpath(@__DIR__, "..", "src", "diagnostics.jl"))
+include(joinpath(@__DIR__, "..", "src", "sharding.jl"))
 
 @testset "Trait distribution and input validation" begin
     d = beta_from_mean_std(0.7, 0.2)
@@ -153,4 +154,25 @@ end
     @test d.block_sd > 0
     @test d.half_drift > 0
     @test d.late_quarter_drift > 0
+end
+
+@testset "Deterministic condition sharding" begin
+    old_count = get(ENV, "ABM_SHARD_COUNT", nothing)
+    old_index = get(ENV, "ABM_SHARD_INDEX", nothing)
+    try
+        ENV["ABM_SHARD_COUNT"] = "3"
+        ENV["ABM_SHARD_INDEX"] = "2"
+        spec = shard_spec()
+        @test spec == (index=2, count=3)
+        @test select_shard(collect(1:8), spec) == [2, 5, 8]
+        @test endswith(shard_dir("results", spec), "shard_002_of_003")
+        ENV["ABM_SHARD_INDEX"] = "4"
+        @test_throws ArgumentError shard_spec()
+        ENV["ABM_SHARD_COUNT"] = "20"
+        ENV["ABM_SHARD_INDEX"] = "20"
+        @test_throws ArgumentError select_shard([1, 2], shard_spec())
+    finally
+        old_count === nothing ? pop!(ENV, "ABM_SHARD_COUNT", nothing) : (ENV["ABM_SHARD_COUNT"] = old_count)
+        old_index === nothing ? pop!(ENV, "ABM_SHARD_INDEX", nothing) : (ENV["ABM_SHARD_INDEX"] = old_index)
+    end
 end
