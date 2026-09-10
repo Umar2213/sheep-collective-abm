@@ -1,0 +1,73 @@
+name: Scientific simulation benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      n_agents:
+        description: Number of agents
+        required: true
+        default: '200'
+        type: choice
+        options:
+          - '200'
+          - '1600'
+      timed_steps:
+        description: Number of timed steps
+        required: true
+        default: '1000'
+        type: string
+      sigma_std:
+        description: Responsiveness SD
+        required: true
+        default: '0.30'
+        type: string
+      noise:
+        description: Angular noise
+        required: true
+        default: '0.5'
+        type: string
+      neighbour_search:
+        description: Neighbour search convention
+        required: true
+        default: exact
+        type: choice
+        options:
+          - exact
+          - approximate
+      update_mode:
+        description: Update convention
+        required: true
+        default: sequential
+        type: choice
+        options:
+          - sequential
+          - synchronous
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10.5'
+      - uses: julia-actions/cache@v2
+      - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Run benchmark
+        env:
+          ABM_BENCHMARK_N: ${{ inputs.n_agents }}
+          ABM_BENCHMARK_STEPS: ${{ inputs.timed_steps }}
+          ABM_BENCHMARK_SIGMA: ${{ inputs.sigma_std }}
+          ABM_BENCHMARK_NOISE: ${{ inputs.noise }}
+          ABM_NEIGHBOR_SEARCH: ${{ inputs.neighbour_search }}
+          ABM_UPDATE_MODE: ${{ inputs.update_mode }}
+        run: julia --project=. src/benchmark_compute.jl | tee benchmark.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-N${{ inputs.n_agents }}-${{ inputs.neighbour_search }}-${{ inputs.update_mode }}
+          path: benchmark.txt
+          retention-days: 30

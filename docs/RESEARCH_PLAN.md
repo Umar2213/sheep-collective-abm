@@ -2,137 +2,195 @@
 
 ## Scope
 
-This repository develops an exploratory sheep-inspired collective-motion model focused
-on how persistent individual differences in responsiveness can affect group-level
-movement. The current implementation is computational rather than empirically
-calibrated. The next stage is to test whether individual response differences and
-measured social relationships improve prediction of observed sheep movement.
+This repository develops an exploratory sheep-inspired collective-motion framework focused
+on how persistent individual differences and relationship structure can shape group
+movement. The current implementation is computational rather than empirically calibrated.
+Its purpose is to build a reproducible mechanistic foundation that can later be tested on
+measured sheep trajectories.
 
-| Research need | Repository status | Necessary next step |
-|---|---|---|
-| Individual differences | Persistent response weights | Relate response to measured traits and state |
-| Heterogeneous influence | Indirect effects possible, influence not parameterised or measured | Separate responsiveness from outgoing influence |
-| Recognised social partners | Absent | Introduce independently estimated dyadic tie weights |
-| Sheep biology | Generic constant-speed movement | Test stop/start states, spatial attraction, repulsion and arena effects |
-| Empirical prediction | No animal data or calibration | Fit training trajectories and test held-out groups/days |
+The project deliberately separates three quantities that are easy to conflate:
 
-## Novelty judgement
+- focal responsiveness `r_i`, how strongly individual i changes its own direction in
+  response to others;
+- outgoing influence `q_j`, how strongly neighbour j contributes to other individuals;
+- directed dyadic weighting `A_ij`, how strongly individual i uses information from j.
 
-Novelty is **not established**. The broad proposition that heterogeneity affects
-collective motion is already well studied. A fixed-mean Beta response sweep could
-be a specific numerical contribution only after demonstrating a distinct mechanism,
-robustness and predictive value beyond existing work. This targeted literature
-check is not an exhaustive systematic review and cannot certify priority for the
-exact rule.
+This distinction is central to the research design. More parameters are not automatically
+better, and outgoing influence should only be estimated if parameter-recovery experiments
+show that it can be separated from dyadic relationship weights.
 
-### Prior research
+## Research question
 
-| Primary source | Relevant contribution | Consequence for this repository |
-|---|---|---|
-| [Miguel, Parley & Pastor-Satorras (2018), Effects of heterogeneous social interactions on flocking dynamics](https://arxiv.org/abs/1801.03371), [PRL DOI](https://doi.org/10.1103/PhysRevLett.120.068303) | Heterogeneous social-network topology in a Vicsek variant affects collective order | Network heterogeneity is established prior art; its mechanism differs from individual response dispersion |
-| [Baglietto, Albano & Candia (2013), Gregarious vs Individualistic Behavior in Vicsek Swarms](https://arxiv.org/abs/1303.6315) | Individualistic movement can destroy ordered motion in a model variant | Low-response or individualistic minorities affecting order is not a new broad claim |
-| [Toulet et al. (2015 preprint), Imitation Combined with a Characteristic Stimulus Duration Results in Robust Collective Decision-making in Sheep](https://arxiv.org/abs/1512.07307) | Sheep experiments and a model link imitation and stimulus duration to departure/following consensus | Sheep-specific behaviour and quantitative experiment/model comparison provide a benchmark |
-| [Garland et al. (2018 preprint), Anatomy of Leadership in Collective Behaviour](https://arxiv.org/abs/1802.01194) | Distinguishes components of leadership and supplies inference test models | Position, response, information flow and causal influence require separate definitions |
+**Can individual responsiveness, partner-specific social relationships and outgoing
+influence be separated mechanistically and statistically, and does that separation improve
+out-of-sample prediction of sheep movement beyond simpler collective-motion models?**
 
-Network topology, response weights and independent direction choices are distinct
-mechanisms, so apparently different effects should not be treated as contradictions
-without matched model comparisons.
+This is a candidate research contribution, not a novelty claim. `NOVELTY_MATRIX.md`
+records representative prior work and the evidence needed before a novelty statement is
+made.
 
-## Proposed research question
+## Nested model hierarchy
 
-**Do measured individual response differences and recognised social ties jointly
-improve out-of-sample predictions of sheep movement, beyond either mechanism alone?**
+All models should use the same movement kernel, boundary treatment, observation model,
+training/test split and scoring rules.
 
-This is an untested candidate contribution, not a novelty claim. Its exact scope
-should be defined against the literature and agreed with the relevant supervisor or
-research collaborators before being presented as a thesis or publication contribution.
+| Model | Individual responsiveness | Partner-specific ties | Outgoing influence |
+|---|---|---|---|
+| M0 | common | uniform | fixed 1 |
+| M1 | individual | uniform | fixed 1 |
+| M2 | common | measured/estimated | fixed 1 |
+| M3 | individual | measured/estimated | fixed 1 |
+| M4 | individual | measured/estimated | estimated only if identifiable |
 
-## Model comparison and hypotheses
+M0 to M3 are the primary hierarchy. M4 is conditional on parameter recovery and should be
+dropped if `q_j` and `A_ij` cannot be separately identified.
 
-Use the same movement kernel, boundaries, observation model and fitting protocol
-for all four nested models:
+## Testable hypotheses
 
-| Model | Individual response | Partner-specific ties |
-|---|---|---|
-| M0 | Common response | Equal weights among local neighbours |
-| M1 | Individual response | Equal weights among local neighbours |
-| M2 | Common response | Measured tie weights |
-| M3 | Individual response | Measured tie weights |
+H1. M1 improves held-out directional or displacement prediction over M0 when persistent
+individual responsiveness differences are present in the empirical data.
 
-For a moving agent i, a candidate weighted neighbour vector is
+H2. M2 improves held-out prediction over M0 and over proximity-only or shuffled-tie
+controls when independently measured relationship structure contains predictive
+information beyond local geometry.
 
-    sum_j A_ij(t) q_j u_j / sum_j A_ij(t) q_j,
+H3. M3 improves held-out prediction over both M1 and M2 if individual responsiveness and
+partner-specific weighting contribute non-redundant information.
 
-restricted to visible/local neighbours. A_ij expresses i's relationship to j;
-q_j is outgoing influence, and a separate r_i controls i's responsiveness.
-Their product can be non-identifiable. Start with q_j=1 and measured, normalized
-A_ij. Add free outgoing influence only if parameter-recovery experiments and
-independent data support it. Handle an empty/zero-weight neighbour set by retaining
-self direction. Predictive performance alone does not prove causal influence.
+H4. Estimated latent parameters remain stable enough across training subsets and
+parameter-recovery experiments to support biological interpretation. Failure of this
+hypothesis means the model can still be predictive, but the latent parameters should not
+be interpreted as measured causal influence.
 
-H1: M1 improves held-out direction predictions over M0.
-H2: M2 improves predictions over spatial proximity alone and shuffled ties.
-H3: M3 improves predictions over both M1 and M2.
-H4: social ties buffer or amplify the effect of physiological state on initiation
-and following, if repeated state measurements and sufficient independent groups
-are available. These hypotheses may be rejected; no outcome is presumed.
+H5. The main qualitative simulation result remains under exact metric neighbour search and
+is not created by the sequential update convention.
 
-## Work that can precede animal data
+These hypotheses may be rejected. No result is assumed in advance.
 
-1. Run the supplied Julia tests and smoke experiments, then benchmark exact versus
-   legacy search on matched parameter grids. Keep outputs and metadata separate.
-2. Establish exact-search baselines at μ=0.7 and σ=0 before larger sweeps. Test
-   sequential versus synchronous updates, density, speed/radius ratio and noise.
-3. Separate trait, initial-state and dynamical RNG streams. Cross multiple dynamic
-   seeds with each trait realization to distinguish sources of variability.
-4. Compare Beta distributions against other bounded distributions and moment-matched
-   finite populations. Quantify tail-fraction and realized-mean effects. Do not
-   remove or clip low weights while claiming the same mean and variance.
-5. Save full or adequately sampled trajectories, agent identities, traits, block
-   moments and per-run diagnostics. Require stable estimates across successively
-   longer windows and initial conditions. Use block resampling for time dependence.
-6. Implement the nested social-tie models in a versioned experimental module and
-   verify exact reduction to M0 under uniform weights. Do not silently change the
-   legacy model or attach synthetic output to an empirical claim.
+## Computational work before animal data
 
-The audit implements repairs and analysis foundations. It does not imply these
-future model experiments have already been performed.
+The immediate priority is the validation protocol in `EXPERIMENT_PROTOCOL.md`.
 
-## Data and validation protocol
+1. Verify the corrected exact-radius implementation with automated tests and smoke runs.
+2. Use independent random streams for traits, initial state and dynamical noise.
+3. Cross multiple dynamic realizations with each trait realization to distinguish major
+   sources of simulation variability.
+4. Run the corrected N=200 production grid and quantify per-run convergence diagnostics.
+5. Repeat the fixed-density size comparison only after the corrected interaction rule is
+   established.
+6. Compare exact versus approximate neighbour search on matched random realizations.
+7. Compare sequential versus synchronous updating on the same matched realizations.
+8. Compare Beta responsiveness distributions with alternative bounded distributions or
+   moment-matched finite populations to determine whether any apparent effect is driven by
+   tail mass rather than dispersion itself.
+9. Add parameter-recovery experiments for synthetic `r_i`, `A_ij` and, only when justified,
+   `q_j` before fitting these quantities to animal data.
 
-Minimum trajectory fields: group_id, animal_id, timestamp_utc, x_m, y_m, position
-quality/uncertainty and observation interval. Use a documented projected coordinate
-system; never treat longitude/latitude degrees as Euclidean metres. Retain missing
-observations and specify interpolation limits. Estimate directions only where
-movement exceeds the GPS error scale, with an explicit observation model.
+Full trajectories or adequately sampled trajectories should be retained for the experiments
+used to study mechanisms, not only condition averages.
 
-Record repeated behavioural assays, observed movement state, relevant physiological
-state, group composition, encounter opportunity and arena/environmental conditions.
-The specific measurements and animal procedures require appropriate research design
-and ethics approval. No empirical measurements are supplied in this repository.
+## Distributional robustness
 
-Estimate social ties in independent/pre-training observation windows and control
-for spatial opportunity. Ties calculated from the same test movement being predicted
-create circularity. Split by complete days, bouts and groups before fitting or
-normalization, never randomly split adjacent GPS frames. Keep final test groups or
-days untouched during model selection.
+A fixed Beta mean with changing standard deviation changes more than one mathematical
+feature of the population. It changes tail probabilities and finite-sample composition.
+Therefore a strong mechanistic analysis should include at least one of the following:
 
-Use held-out heading/turn errors, displacement forecast error and predictive
-log scores where a probabilistic observation model is specified. Also compare
-spatial cohesion, initiation/following latency, fragmentation and leadership
-turnover, with predefined measures. Report uncertainty resampled at the independent
-group/day level, not thousands of correlated GPS frames. Compare shuffled traits,
-shuffled networks preserving relevant structure, and proximity-only baselines.
-Perform parameter recovery on simulated data before interpreting fitted mechanisms.
+- moment-matched alternative bounded distributions;
+- finite populations constructed to have tightly controlled sample mean and variance;
+- analyses that condition on realized mean, variance and low/high-response tail fractions.
+
+The aim is to separate an effect of heterogeneity from an effect of a particular Beta tail.
+
+## Empirical data requirements
+
+Minimum movement data should include:
+
+`group_id`, `animal_id`, timestamp, projected `x` and `y` coordinates in metres,
+position-quality information, and the observation interval.
+
+Useful accompanying data include repeated behavioural measurements, group composition,
+movement state, environmental conditions, body or physiological measurements relevant to
+the biological question, and independent observations from which social relationships can
+be estimated.
+
+Longitude and latitude degrees must not be treated as Euclidean metres. Movement direction
+should only be estimated when displacement is sufficiently larger than location error, or
+an explicit observation-error model should be fitted.
+
+## Social relationships and leakage control
+
+Social ties used to predict a test movement should be estimated from independent or
+pre-training observations. Constructing a network from the same movement bout being
+predicted risks circularity.
+
+The primary empirical comparison should include:
+
+- uniform-neighbour baseline;
+- proximity-only weighting;
+- independently estimated social ties;
+- shuffled traits;
+- shuffled ties that preserve relevant network structure;
+- individual responsiveness alone;
+- social ties alone;
+- their joint model.
+
+## Train/test design
+
+Do not randomly split adjacent GPS frames. Such frames are strongly dependent and can make
+prediction accuracy look unrealistically high.
+
+Prefer held-out units such as complete days, movement bouts or groups. If enough independent
+groups are available, a particularly strong design is leave-one-group-out evaluation.
+Model selection should occur without touching the final test units.
+
+## Evaluation
+
+Potential predictive outcomes include heading or turning-angle error, displacement forecast
+error and predictive log score when a probabilistic observation model is used. Group-level
+outcomes may include spatial cohesion, fragmentation, initiation/following latency and
+leadership turnover when these are defined independently of the fitted model.
+
+Uncertainty should be calculated at the level of independent groups, days or bouts, not by
+treating thousands of adjacent GPS frames as independent observations.
+
+## Parameter recovery
+
+Before interpreting `r_i`, `A_ij` or `q_j`, generate synthetic data from known parameters,
+fit the intended inference procedure, and measure recovery error, bias, interval coverage
+and confounding between parameter classes.
+
+Important tests include:
+
+- whether heterogeneous `r_i` can be recovered when all ties are uniform;
+- whether directed `A_ij` can be recovered when responsiveness is common;
+- whether joint `r_i` and `A_ij` are distinguishable;
+- whether free `q_j` can be distinguished from rescaling columns of `A_ij`;
+- sensitivity to location error, missing observations and sampling interval;
+- sensitivity to unmodelled stop/start behaviour.
+
+If recovery fails, reduce model complexity before biological interpretation.
 
 ## Decision gates
 
-- Software gate: Julia tests and both smoke entry points pass on the pinned environment.
-- Simulation gate: exact-radius, update-rule and stationarity controls yield reproducible estimates.
-- Empirical gate: verified trajectory data, independent social ties, identifiable parameters,
-  and held-out predictive improvement support the biological question.
-- Novelty gate: a focused literature matrix and supervisor comparison identify the precise
-  contribution beyond existing mechanisms.
+**Software gate:** Julia tests and all three smoke experiments pass in the pinned
+environment.
 
-A publication claim should follow these gates. More phase diagrams or a more complex
-model alone are not a substitute for a well-defined biological mechanism and test.
+**Simulation gate:** corrected exact-radius results are reproducible, per-run convergence is
+acceptable after any required extensions, and the principal effect survives matched
+algorithmic controls.
+
+**Distribution gate:** the main conclusion is not solely a consequence of the chosen Beta
+distribution tail or uncontrolled realized sample means.
+
+**Identifiability gate:** synthetic parameter recovery establishes which latent quantities
+can be estimated reliably.
+
+**Empirical gate:** held-out sheep trajectories show predictive improvement over simpler
+baselines with uncertainty assessed at independent biological units.
+
+**Novelty gate:** a focused literature review shows that the final combination of mechanism,
+identifiability analysis and empirical predictive test makes a specific contribution beyond
+published work.
+
+A publication claim should follow these gates. Additional phase diagrams or a more complex
+model are not substitutes for robust mechanism, identifiability and held-out validation.

@@ -1,0 +1,71 @@
+name: Scientific simulation shard
+
+on:
+  workflow_dispatch:
+    inputs:
+      experiment:
+        description: Full experiment to run
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - finite_size
+          - algorithmic_controls
+      shard_count:
+        description: Total number of complete-condition shards
+        required: true
+        default: '8'
+        type: string
+      shard_index:
+        description: One-based shard index
+        required: true
+        default: '1'
+        type: string
+      julia_threads:
+        description: Julia threads on the hosted runner
+        required: true
+        default: '2'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10.5'
+      - uses: julia-actions/cache@v2
+      - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Run one complete-condition shard
+        env:
+          ABM_SHARD_COUNT: ${{ inputs.shard_count }}
+          ABM_SHARD_INDEX: ${{ inputs.shard_index }}
+          ABM_OUTPUT_DIR: ${{ github.workspace }}/run_output
+          ABM_NEIGHBOR_SEARCH: exact
+          ABM_UPDATE_MODE: sequential
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ inputs.experiment }}" in
+            production) SCRIPT="src/production_sweep.jl" ;;
+            finite_size) SCRIPT="src/fss_sweep.jl" ;;
+            algorithmic_controls) SCRIPT="src/control_sweep.jl" ;;
+            *) echo "Unknown experiment" >&2; exit 2 ;;
+          esac
+          julia --project=. --threads="${{ inputs.julia_threads }}" "$SCRIPT"
+          test -d run_output
+          find run_output -type f -print0 | sort -z | xargs -0 sha256sum > run_output/SHA256SUMS.txt
+          echo "Produced files:"
+          find run_output -maxdepth 3 -type f -print | sort
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.experiment }}-shard-${{ inputs.shard_index }}-of-${{ inputs.shard_count }}
+          path: run_output/
+          if-no-files-found: error
+          retention-days: 30
