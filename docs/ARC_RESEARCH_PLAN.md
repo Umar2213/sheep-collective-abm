@@ -1,33 +1,29 @@
-# ARC alignment and research development
+# Research development plan
 
-## Assessment
+## Scope
 
-The repository is relevant preparation for the sheep component of ARC DP260101231,
-“How individual variation drives collective motion”. The grant description
-provided for this audit identifies heterogeneous influence, recognisable sheep
-and social relationships, with a complementary hunger-related locust system.
-[Grant record](https://dataportal.arc.gov.au/RGS/Web/Grants/DP260101231).
-The portal could not be independently retrieved during this audit; project facts
-here follow that supplied description. Repository relevance does not establish
-formal ARC endorsement, project membership or a completed project output.
+This repository develops an exploratory sheep-inspired collective-motion model focused
+on how persistent individual differences in responsiveness can affect group-level
+movement. The current implementation is computational rather than empirically
+calibrated. The next stage is to test whether individual response differences and
+measured social relationships improve prediction of observed sheep movement.
 
-| Project need | Repository status | Necessary next step |
+| Research need | Repository status | Necessary next step |
 |---|---|---|
 | Individual differences | Persistent response weights | Relate response to measured traits and state |
 | Heterogeneous influence | Indirect effects possible, influence not parameterised or measured | Separate responsiveness from outgoing influence |
 | Recognised social partners | Absent | Introduce independently estimated dyadic tie weights |
-| Sheep biology | Species name, generic constant-speed movement | Test stop/start states, spatial attraction, repulsion and arena effects |
+| Sheep biology | Generic constant-speed movement | Test stop/start states, spatial attraction, repulsion and arena effects |
 | Empirical prediction | No animal data or calibration | Fit training trajectories and test held-out groups/days |
-| Sheep/locust comparison | No locust implementation | Coordinate common observables and species-specific interaction mechanisms |
 
 ## Novelty judgement
 
-Novelty is **not established**. This is useful exploratory modelling and a
-preparation portfolio, but the broad proposition that heterogeneity affects
+Novelty is **not established**. The broad proposition that heterogeneity affects
 collective motion is already well studied. A fixed-mean Beta response sweep could
-be a specific numerical contribution only after demonstrating a distinct mechanism
-and robust results beyond existing work. This targeted literature check is not an
-exhaustive systematic review and cannot certify priority for the exact rule.
+be a specific numerical contribution only after demonstrating a distinct mechanism,
+robustness and predictive value beyond existing work. This targeted literature
+check is not an exhaustive systematic review and cannot certify priority for the
+exact rule.
 
 ### Prior research
 
@@ -35,21 +31,21 @@ exhaustive systematic review and cannot certify priority for the exact rule.
 |---|---|---|
 | [Miguel, Parley & Pastor-Satorras (2018), Effects of heterogeneous social interactions on flocking dynamics](https://arxiv.org/abs/1801.03371), [PRL DOI](https://doi.org/10.1103/PhysRevLett.120.068303) | Heterogeneous social-network topology in a Vicsek variant affects collective order | Network heterogeneity is established prior art; its mechanism differs from individual response dispersion |
 | [Baglietto, Albano & Candia (2013), Gregarious vs Individualistic Behavior in Vicsek Swarms](https://arxiv.org/abs/1303.6315) | Individualistic movement can destroy ordered motion in a model variant | Low-response or individualistic minorities affecting order is not a new broad claim |
-| [Toulet et al. (2015 preprint), Imitation Combined with a Characteristic Stimulus Duration Results in Robust Collective Decision-making in Sheep](https://arxiv.org/abs/1512.07307) | Sheep experiments and a model link imitation and stimulus duration to departure/following consensus | Sheep-specific behaviour and quantitative experiment/model comparison already provide a benchmark |
+| [Toulet et al. (2015 preprint), Imitation Combined with a Characteristic Stimulus Duration Results in Robust Collective Decision-making in Sheep](https://arxiv.org/abs/1512.07307) | Sheep experiments and a model link imitation and stimulus duration to departure/following consensus | Sheep-specific behaviour and quantitative experiment/model comparison provide a benchmark |
 | [Garland et al. (2018 preprint), Anatomy of Leadership in Collective Behaviour](https://arxiv.org/abs/1802.01194) | Distinguishes components of leadership and supplies inference test models | Position, response, information flow and causal influence require separate definitions |
 
-Do not infer that an apparently different sign of a heterogeneity effect contradicts
-these studies. Network topology, response weights and independent direction choices
-are distinct interventions.
+Network topology, response weights and independent direction choices are distinct
+mechanisms, so apparently different effects should not be treated as contradictions
+without matched model comparisons.
 
 ## Proposed research question
 
 **Do measured individual response differences and recognised social ties jointly
 improve out-of-sample predictions of sheep movement, beyond either mechanism alone?**
 
-This is an untested candidate contribution, not a novelty claim. Agree its exact
-scope and overlap with the other project researchers with the supervisor before
-committing to a thesis chapter or paper.
+This is an untested candidate contribution, not a novelty claim. Its exact scope
+should be defined against the literature and agreed with the relevant supervisor or
+research collaborators before being presented as a thesis or publication contribution.
 
 ## Model comparison and hypotheses
 
@@ -99,8 +95,8 @@ are available. These hypotheses may be rejected; no outcome is presumed.
    verify exact reduction to M0 under uniform weights. Do not silently change the
    legacy model or attach synthetic output to an empirical claim.
 
-The audit implements repairs and analysis foundations. It does not pretend these
-future model experiments have been performed.
+The audit implements repairs and analysis foundations. It does not imply these
+future model experiments have already been performed.
 
 ## Data and validation protocol
 
@@ -112,8 +108,8 @@ movement exceeds the GPS error scale, with an explicit observation model.
 
 Record repeated behavioural assays, observed movement state, relevant physiological
 state, group composition, encounter opportunity and arena/environmental conditions.
-The specific measurements and animal procedures require the research team's design
-and ethics process. No empirical measurements are supplied in this repository.
+The specific measurements and animal procedures require appropriate research design
+and ethics approval. No empirical measurements are supplied in this repository.
 
 Estimate social ties in independent/pre-training observation windows and control
 for spatial opportunity. Ties calculated from the same test movement being predicted
@@ -136,7 +132,7 @@ Perform parameter recovery on simulated data before interpreting fitted mechanis
 - Empirical gate: verified trajectory data, independent social ties, identifiable parameters,
   and held-out predictive improvement support the biological question.
 - Novelty gate: a focused literature matrix and supervisor comparison identify the precise
-  contribution beyond existing mechanisms and other ARC work.
+  contribution beyond existing mechanisms.
 
 A publication claim should follow these gates. More phase diagrams or a more complex
 model alone are not a substitute for a well-defined biological mechanism and test.
