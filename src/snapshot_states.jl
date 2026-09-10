@@ -7,7 +7,7 @@ const CONDS   = [0.00, 0.30, 0.40, 0.45]   # σ: ordered -> fragmented
 const N       = 200
 const N_STEPS = 30000
 const SEED    = 1
-const OUT     = joinpath(@__DIR__, "..", "results", "snapshots")
+const OUT     = joinpath(@__DIR__, "..", "results", "exact_snapshots")
 
 rows = DataFrame(sigma=Float64[], x=Float64[], y=Float64[], theta=Float64[], w=Float64[])
 for s in CONDS
@@ -20,4 +20,4 @@ for s in CONDS
 end
 mkpath(OUT)
 CSV.write(joinpath(OUT, "snapshot_states.csv"), rows)
-println("  wrote results/snapshots/snapshot_states.csv  ($(nrow(rows)) rows)")
+println("  wrote $OUT/snapshot_states.csv  ($(nrow(rows)) rows)")

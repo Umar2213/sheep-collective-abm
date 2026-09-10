@@ -1,4 +1,4 @@
-# diag_equilibration.jl — decisive checks, reuses the real model unchanged.
+# diag_equilibration.jl — short-versus-long window diagnostics for the exact-search model.
 # Run:  julia --project=. --threads=auto src/diag_equilibration.jl
 include(joinpath(@__DIR__, "heterogeneous_model_v2.jl"))
 using Statistics, DataFrames, CSV, Printf
@@ -7,7 +7,7 @@ const NOISE=0.5; const SIGMA_MEAN=0.7
 const SIGMA_LIST=[0.0,0.20,0.30,0.33,0.35,0.40]
 const N_AGENTS=200; const N_SEEDS=8; const N_STEPS=15000
 const SHORT_CUT=500; const SHORT_WIN=100; const MEAS_FROM=7501; const DECIMATE=25
-const OUTDIR=joinpath(@__DIR__, "..", "results", "diagnostics")
+const OUTDIR=joinpath(@__DIR__, "..", "results", "exact_diagnostics")
 
 function run_one(; sigma_std, seed)
     model, sv = create_sheep_model(; N=N_AGENTS, noise=NOISE,
@@ -54,4 +54,4 @@ for row in eachrow(summ)
         row.sigma,row.phi_short,row.phi_long,row.bias,row.max_drift,
         row.real_std,100*row.frac_lo,100*row.frac_hi)
 end
-println("\n  wrote results/diagnostics/equilibration_summary.csv + _timeseries.csv")
+println("\n  wrote exact-search diagnostics in $OUTDIR")

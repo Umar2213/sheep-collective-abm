@@ -1,0 +1,33 @@
+name: Model and stored-data checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+      - run: python src/audit_results.py
+      - run: python src/analyze_production.py && python src/make_main_figure.py && python src/analyze_fss.py && python src/make_snapshots.py
+  julia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10.5'
+      - uses: julia-actions/cache@v2
+      - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - run: julia --project=. tests/runtests.jl
+      - run: julia --project=. --threads=2 src/production_sweep.jl
+        env:
+          ABM_SMOKE: '1'
+      - run: julia --project=. --threads=2 src/fss_sweep.jl
+        env:
+          ABM_SMOKE: '1'
