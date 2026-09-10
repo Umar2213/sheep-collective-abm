@@ -1,5 +1,9 @@
 # Sheep collective ABM: heterogeneous alignment response
 
+[![Model and stored-data checks](https://github.com/Umar2213/sheep-collective-abm/actions/workflows/checks.yml/badge.svg)](https://github.com/Umar2213/sheep-collective-abm/actions/workflows/checks.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Julia 1.10.5](https://img.shields.io/badge/Julia-1.10.5-9558B2.svg)](https://julialang.org/)
+
 A Julia simulation scaffold for investigating how individual differences in
 alignment response affect collective heading order. It is relevant preliminary
 work for the sheep component of ARC DP260101231, **How individual variation drives
