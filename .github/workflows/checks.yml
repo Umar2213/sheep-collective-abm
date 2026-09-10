@@ -37,6 +37,7 @@ jobs:
       - uses: julia-actions/cache@v2
       - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
       - run: julia --project=. tests/runtests.jl
+      - run: julia --project=. tests/trait_distributions.jl
       - run: julia --project=. --threads=2 src/production_sweep.jl
         env:
           ABM_SMOKE: '1'
