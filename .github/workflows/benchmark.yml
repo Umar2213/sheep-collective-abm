@@ -2,7 +2,7 @@ name: Scientific simulation benchmark
 
 on:
   push:
-    branches: [master]
+    branches: [ops/one-time-benchmark]
     paths:
       - '.github/workflows/benchmark.yml'
   workflow_dispatch:
