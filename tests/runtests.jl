@@ -90,7 +90,9 @@ end
 @testset "Uniform social ties reduce exactly to the baseline" begin
     N = 10
     A = ones(N, N)
-    A[diagind(A)] .= 0.0
+    for i in 1:N
+        A[i, i] = 0.0
+    end
     base, wb = create_sheep_model(N=N, seed=77, σ_std=0.15,
         trait_seed=11, init_seed=22, dynamic_seed=33)
     tied, wt = create_sheep_model(N=N, seed=77, σ_std=0.15,
