@@ -16,30 +16,36 @@ proposed mechanism has been tested against empirical sheep trajectories.
 | Individual-specific interaction rules | Schaerf, Herbert-Read & Ward, 2021, Journal of the Royal Society Interface, DOI: 10.1098/rsif.2020.0925 | Statistical differences among individuals' movement interaction rules have already been tested, so individual-specific response rules alone are not a sufficient novelty claim. |
 | Dyadic movement influence and hierarchy inference | Milner et al., 2021, Methods in Ecology and Evolution, DOI: 10.1111/2041-210X.13468 | Directed dyadic influence structures can already be inferred from interacting-animal movement data. |
 | Time-varying social influence | Sridhar et al., 2023, Philosophical Transactions B, DOI: 10.1098/rstb.2022.0062 | Social influence can depend on the timescale of analysis, so any fitted influence parameter should not automatically be treated as a timeless trait. |
+| Sheep decision rules during collective departures | Pillot et al., 2011, PLOS ONE, DOI: 10.1371/journal.pone.0014487 | Sheep stimulus-response rules and their scaling with group size have already been quantified experimentally, so a sheep-specific individual response rule is not novel by itself. |
+| Data-driven individual-level interaction modelling in small sheep flocks | Welch, Alzubaidi & Schaerf, 2023, MODSIM2023, "Modelling collective states and individual-level interactions in small sheep flocks" | High-resolution sheep trajectories have already been used to infer pairwise movement interactions and construct an agent-based model, so combining sheep tracking with an ABM is not itself a novelty claim. |
 | Sheep collective motion with alternating leadership | Gómez-Nava, Bon & Peruani, 2022, Nature Physics, DOI: 10.1038/s41567-022-01769-8 | Sheep can show intermittent motion with temporal leaders and strongly directed interaction structure, so leadership itself is not a new claim. |
 | High-resolution sheep tracking for leadership and social networks | Maroto-Molina et al., 2021, Sensors, PMID: 33573163 | RTK/GNSS data can quantify sheep movement leaders and association networks. |
 | Directional information flow in sheep under herding pressure | Communications Biology, 2024, DOI: 10.1038/s42003-024-07245-8 | Position-dependent directional influence and data-driven ABMs have already been applied to sheep. |
+| Standardized trajectory-level collective-motion analysis | Papadopoulou, Garnier & King, 2025, Methods in Ecology and Evolution, DOI: 10.1111/2041-210X.14460 | Modern software already provides standardized event-level and trajectory-level collective-motion metrics, including a sheep case study. Empirical validation should use or benchmark against established trajectory metrics rather than inventing ad hoc summaries without justification. |
 | Collective motion without an explicit alignment rule | Allocentric flocking, Nature Communications, 2025, DOI: 10.1038/s41467-025-64676-5 | Explicit heading alignment is not the only plausible mechanism. Empirical work should compare the proposed interaction rule against simpler or alternative behavioural kernels. |
-| Sheep movement initiation and following | Earlier experimental work on collective departures and spontaneous movements | Social context, recruitment and leader/follower behaviour have already been quantified experimentally. |
 
 ## Candidate contribution that remains worth testing
 
 The strongest defensible direction is not "heterogeneity affects flocking", "individuals
-use different interaction rules", or "some sheep influence others". All of those broad
-ideas have substantial prior art.
+use different interaction rules", "some sheep influence others", "we inferred a sheep
+interaction rule", or "we built a sheep ABM". All of those broad ideas have substantial
+prior art.
 
 A narrower candidate is a sheep-specific, preregistered-style model-comparison framework
-that asks whether three mathematically distinct components add non-redundant predictive
-information under strict identifiability and held-out validation:
+that asks whether distinct biological information sources add non-redundant predictive
+value under strict identifiability and held-out validation:
 
 1. focal responsiveness r_i, how strongly individual i changes its own direction in
-   response to others;
-2. outgoing influence q_j, how strongly neighbour j contributes to others' updates;
-3. directed dyadic relationship A_ij, how strongly focal i uses information from j.
+   response to neighbours;
+2. directed dyadic relationship A_ij, how strongly focal i uses information from j,
+   characterized independently of the test trajectory wherever possible;
+3. outgoing influence q_j, how strongly neighbour j contributes to others' updates,
+   included only if separate identifiability can be demonstrated.
 
 The potential contribution would come from the combination of mechanism separation,
-parameter-recovery analysis, independent social-tie estimation, matched computational
-controls and out-of-sample sheep prediction, not from naming these components alone.
+parameter-recovery analysis, independent social-tie characterization, matched
+computational controls, alternative behavioural kernels, and out-of-sample sheep
+prediction. Merely naming or fitting these components is not enough.
 
 ## Required nested comparisons
 
@@ -67,6 +73,7 @@ A strong paper should demonstrate all of the following:
 
 - exact-radius and update-rule controls do not qualitatively overturn the result;
 - simulation estimates are stable across longer windows and independent initial states;
+- the main heterogeneity effect is not an artifact of choosing one trait-distribution shape;
 - parameter-recovery experiments show which latent quantities can actually be identified;
 - model comparisons use complete held-out sheep groups, days or movement bouts rather
   than randomly split adjacent frames;
@@ -77,6 +84,7 @@ A strong paper should demonstrate all of the following:
 - at least one plausible alternative movement kernel is tested where data permit;
 - time-varying influence is considered rather than assuming every inferred influence score
   is a permanent individual characteristic;
+- established trajectory-level metrics are used or explicitly benchmarked where relevant;
 - uncertainty is calculated at the independent animal-group/day/bout level;
 - biological interpretation is separated from purely computational effects.
 
@@ -84,16 +92,18 @@ A strong paper should demonstrate all of the following:
 
 Until the above evidence exists, do not claim that the repository has discovered a new
 phase transition, a universal critical exponent, a novel sheep leadership mechanism, a
-new general theory of individual heterogeneity, or that a fixed-mean Beta dispersion sweep
-is itself biologically novel.
+new general theory of individual heterogeneity, the first data-driven sheep ABM, the first
+individual-level sheep interaction model, or that a fixed-mean Beta dispersion sweep is
+itself biologically novel.
 
 ## Working gap statement
 
 A potentially publishable gap is whether, in sheep, independently characterized dyadic
 relationships and individual responsiveness provide non-redundant, identifiable and
 out-of-sample predictive information when evaluated together against simpler baselines,
-algorithmic controls and alternative movement kernels.
+algorithmic controls, distribution-shape controls, and alternative movement kernels.
 
 This is deliberately phrased as an open question rather than a claim that no prior study
 has addressed it. The gap must be re-evaluated before manuscript submission with a focused
-systematic search.
+systematic search, including forward and backward citation tracing from the closest
+sheep-specific interaction-modelling studies.

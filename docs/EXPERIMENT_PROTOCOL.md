@@ -13,6 +13,13 @@ Python tests plus smoke production, finite-size and matched-control experiments.
 scientific sweeps have not yet been run and no corrected scientific result is inferred from
 the smoke data.
 
+A 1,000-step exact-radius, sequential-update calibration benchmark was also run on a
+GitHub-hosted Ubuntu runner after compilation warmup. At N=200 it measured about 5,066
+steps/s, corresponding to about 0.20 min for one 60,000-step run. At N=1600 it measured
+about 581 steps/s, corresponding to about 2.30 min for one 80,000-step run. These are
+planning measurements from hosted hardware, not biological or scientific evidence, and
+full-grid throughput will depend on the actual compute resource and parallel scheduler.
+
 ## Stage 1, software verification
 
 Required before any full experiment:
@@ -68,6 +75,14 @@ The primary comparison is the paired change in mean heading order for each reali
 A qualitative scientific result should not depend solely on one undocumented algorithmic
 convention.
 
+## Stage 5, trait-distribution robustness
+
+The primary Beta responsiveness distribution is compared with a moment-matched two-point
+distribution having the same target mean and variance. Shared trait ranks and matched
+initial/dynamic seeds are used so the distribution-shape contrast is paired as closely as
+possible. A claimed heterogeneity effect should not be attributed to variance alone if it
+changes qualitatively when the distribution shape changes.
+
 ## Convergence assessment
 
 Each post-warmup run records:
@@ -94,9 +109,10 @@ A result can move forward to interpretation only if:
 2. the primary estimate is stable when the measurement window is lengthened;
 3. multiple independent trait and dynamic realizations agree within quantified uncertainty;
 4. the qualitative effect persists under synchronous-update and exact-search controls;
-5. finite-size claims do not depend on a fluctuation maximum at the sampled boundary;
-6. any proposed transition location is supported by more than one finite-size diagnostic;
-7. biological claims are deferred until empirical sheep data are fitted and held out.
+5. the main heterogeneity result is not solely a consequence of one trait-distribution shape;
+6. finite-size claims do not depend on a fluctuation maximum at the sampled boundary;
+7. any proposed transition location is supported by more than one finite-size diagnostic;
+8. biological claims are deferred until empirical sheep data are fitted and held out.
 
 ## Empirical-validation gate
 
@@ -113,6 +129,7 @@ Software and smoke validation:
 ```bash
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --project=. tests/runtests.jl
+julia --project=. tests/trait_distributions.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/production_sweep.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/fss_sweep.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/control_sweep.jl
@@ -124,21 +141,23 @@ Full experiments:
 julia --project=. --threads=auto src/production_sweep.jl
 julia --project=. --threads=auto src/fss_sweep.jl
 julia --project=. --threads=auto src/control_sweep.jl
+julia --project=. --threads=auto src/distribution_control.jl
 ```
 
 ## Compute boundary
 
 The default full design contains thousands of long independent simulation runs, including
-N up to 1600 in the finite-size experiment. GitHub Actions is intentionally restricted to
-small smoke experiments because hosted CI is for software verification, not for consuming
-large amounts of scientific compute. The full sweeps should be run on a workstation,
-cluster or other compute resource where wall time, memory and job interruption can be
-managed explicitly.
+N up to 1600 in the finite-size experiment. GitHub Actions is intentionally used for
+software verification, lightweight benchmarks and controlled automation rather than as an
+unbounded scientific-compute service. The full sweeps should be run on a workstation,
+cluster or other compute resource where wall time, memory, job interruption and resource
+allocation can be managed explicitly.
 
-Before launching the complete grid, benchmark representative N=200 and N=1600 conditions.
-Use those timings to choose a realistic parallelization strategy. If the design is split
-over multiple jobs, every job must use unique output paths and metadata, and all parts must
-be checked for duplicate or missing condition and replicate keys before aggregation.
+The hosted benchmark provides an order-of-magnitude planning estimate only. Before a full
+campaign on a different machine, rerun `src/benchmark_compute.jl` there. If the design is
+split over multiple jobs, use complete-condition sharding, unique output paths and the
+repository's shard merger. Every expected condition and replicate key must be present once
+and only once before aggregation.
 
 A failed or interrupted large run must not be silently treated as complete. Scientific
 summaries should be generated only after the expected condition and replicate keys have
