@@ -23,16 +23,17 @@ end
 # 2. MODEL PROPERTIES
 
 Base.@kwdef mutable struct SheepProps
-    speed           :: Float64 = 0.03
-    noise           :: Float64 = 0.5
-    radius          :: Float64 = 1.0
-    dt              :: Float64 = 1.0
-    neighbor_search :: Symbol = :exact
-    update_mode     :: Symbol = :sequential
-    σ_mean          :: Float64 = 0.7
-    σ_std           :: Float64 = 0.1
-    social_ties     :: Union{Nothing, Matrix{Float64}} = nothing
-    order_history   :: Vector{Float64} = Float64[]
+    speed              :: Float64 = 0.03
+    noise              :: Float64 = 0.5
+    radius             :: Float64 = 1.0
+    dt                 :: Float64 = 1.0
+    neighbor_search    :: Symbol = :exact
+    update_mode        :: Symbol = :sequential
+    trait_distribution :: Symbol = :beta
+    σ_mean             :: Float64 = 0.7
+    σ_std              :: Float64 = 0.1
+    social_ties        :: Union{Nothing, Matrix{Float64}} = nothing
+    order_history      :: Vector{Float64} = Float64[]
 end
 
 
@@ -53,6 +54,8 @@ function beta_from_mean_std(μ::Real, s::Real)
     common = μ * (1 - μ) / v - 1
     return Beta(μ * common, (1 - μ) * common)
 end
+
+include(joinpath(@__DIR__, "trait_distributions.jl"))
 
 function _checked_seed(name, value)
     value isa Integer || throw(ArgumentError("$name must be an integer"))
@@ -194,7 +197,8 @@ sheep_model_step!(model) = sheep_model_step_sequential!(model)
 
 function create_sheep_model(; N=200, L=20.0, speed=0.03, noise=0.5,
                             radius=1.0, dt=1.0, neighbor_search=:exact,
-                            update_mode=:sequential, σ_mean=0.7, σ_std=0.1,
+                            update_mode=:sequential, trait_distribution=:beta,
+                            σ_mean=0.7, σ_std=0.1,
                             seed=42, trait_seed=nothing, init_seed=nothing,
                             dynamic_seed=nothing, social_ties=nothing,
                             influence_weights=nothing)
@@ -207,6 +211,11 @@ function create_sheep_model(; N=200, L=20.0, speed=0.03, noise=0.5,
         throw(ArgumentError("neighbor_search must be :exact or :approximate"))
     update_mode in (:sequential, :synchronous) ||
         throw(ArgumentError("update_mode must be :sequential or :synchronous"))
+    trait_distribution in (:beta, :two_point) ||
+        throw(ArgumentError("trait_distribution must be :beta or :two_point"))
+
+    # Validate requested trait moments before allocating the model.
+    beta_from_mean_std(σ_mean, σ_std)
 
     seeds = resolve_rng_seeds(seed; trait_seed=trait_seed, init_seed=init_seed,
                               dynamic_seed=dynamic_seed)
@@ -216,6 +225,7 @@ function create_sheep_model(; N=200, L=20.0, speed=0.03, noise=0.5,
     space = ContinuousSpace((L, L); periodic=true)
     props = SheepProps(speed=speed, noise=noise, radius=radius, dt=dt,
                        neighbor_search=neighbor_search, update_mode=update_mode,
+                       trait_distribution=trait_distribution,
                        σ_mean=σ_mean, σ_std=σ_std, social_ties=A)
 
     agent_step_fn = update_mode == :sequential ? sheep_agent_step! : sheep_agent_noop!
@@ -232,13 +242,12 @@ function create_sheep_model(; N=200, L=20.0, speed=0.03, noise=0.5,
 
     trait_rng = MersenneTwister(seeds.trait_seed)
     init_rng = MersenneTwister(seeds.init_seed)
-    σ_dist = beta_from_mean_std(σ_mean, σ_std)
     σ_values = Float64[]
 
     for i in 1:N
         θ_init = rand(init_rng) * 2π
         pos_init = (rand(init_rng) * L, rand(init_rng) * L)
-        σ_i = σ_dist === nothing ? Float64(σ_mean) : rand(trait_rng, σ_dist)
+        σ_i = draw_responsiveness(trait_rng, trait_distribution, σ_mean, σ_std)
         push!(σ_values, σ_i)
         add_agent!(pos_init, model;
             vel=(speed * cos(θ_init), speed * sin(θ_init)),
@@ -257,6 +266,7 @@ end
 function run_single_seed(; σ_mean, σ_std, seed, n_steps=500, N=200,
                          L=20.0, speed=0.03, noise=0.5, radius=1.0,
                          neighbor_search=:exact, update_mode=:sequential,
+                         trait_distribution=:beta,
                          trait_seed=nothing, init_seed=nothing, dynamic_seed=nothing,
                          social_ties=nothing, influence_weights=nothing)
     n_steps isa Integer && n_steps >= 100 ||
@@ -264,6 +274,7 @@ function run_single_seed(; σ_mean, σ_std, seed, n_steps=500, N=200,
     model, σ_values = create_sheep_model(;
         N=N, L=L, speed=speed, noise=noise, radius=radius,
         neighbor_search=neighbor_search, update_mode=update_mode,
+        trait_distribution=trait_distribution,
         σ_mean=σ_mean, σ_std=σ_std, seed=seed,
         trait_seed=trait_seed, init_seed=init_seed, dynamic_seed=dynamic_seed,
         social_ties=social_ties, influence_weights=influence_weights
@@ -282,7 +293,8 @@ end
 # 8. RUN ONE CONDITION, BACKWARD-COMPATIBLE PILOT API
 
 function run_condition(; σ_mean, σ_std, n_seeds=15, n_steps=500, noise=0.5,
-                       neighbor_search=:exact, update_mode=:sequential)
+                       neighbor_search=:exact, update_mode=:sequential,
+                       trait_distribution=:beta)
     n_seeds isa Integer && n_seeds >= 2 ||
         throw(ArgumentError("n_seeds must be an integer >= 2"))
     φ_values = Float64[]
@@ -293,7 +305,8 @@ function run_condition(; σ_mean, σ_std, n_seeds=15, n_steps=500, noise=0.5,
     for seed in 1:n_seeds
         r = run_single_seed(; σ_mean=σ_mean, σ_std=σ_std, seed=seed,
                             n_steps=n_steps, noise=noise,
-                            neighbor_search=neighbor_search, update_mode=update_mode)
+                            neighbor_search=neighbor_search, update_mode=update_mode,
+                            trait_distribution=trait_distribution)
         push!(φ_values, r.φ_steady)
         push!(σmean_vals, r.actual_σ_mean)
         push!(σstd_vals, r.actual_σ_std)
@@ -313,11 +326,12 @@ function run_experiment(; σ_mean=0.7,
                         σ_std_list=[0.0, 0.05, 0.10, 0.15, 0.20, 0.25],
                         n_seeds=15, n_steps=500, noise=0.5,
                         neighbor_search=:exact, update_mode=:sequential,
+                        trait_distribution=:beta,
                         output_dir=joinpath(@__DIR__, "..", "results", "pilot"),
                         label="experiment")
     println("=" ^ 64)
     println("  $(label): effect of σ_std on heading order φ")
-    println("  search=$(neighbor_search), update=$(update_mode)")
+    println("  search=$(neighbor_search), update=$(update_mode), traits=$(trait_distribution)")
     println("  fixed σ_mean=$(σ_mean), noise=$(noise), N=200")
     println("  $(n_seeds) seeds, $(n_steps) steps per condition")
     println("=" ^ 64)
@@ -331,7 +345,8 @@ function run_experiment(; σ_mean=0.7,
     for σ_std in σ_std_list
         φ_vals, σm_vals, σs_vals = run_condition(;
             σ_mean=σ_mean, σ_std=σ_std, n_seeds=n_seeds, n_steps=n_steps,
-            noise=noise, neighbor_search=neighbor_search, update_mode=update_mode)
+            noise=noise, neighbor_search=neighbor_search, update_mode=update_mode,
+            trait_distribution=trait_distribution)
         for k in 1:n_seeds
             push!(raw, (σ_mean=σ_mean, noise=noise, σ_std_input=σ_std, seed=k,
                         actual_σ_mean=σm_vals[k], actual_σ_std=σs_vals[k],
