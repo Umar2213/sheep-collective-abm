@@ -4,127 +4,121 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Julia 1.10.5](https://img.shields.io/badge/Julia-1.10.5-9558B2.svg)](https://julialang.org/)
 
-Research software for investigating how individual differences in alignment
-response affect collective heading order in a sheep-inspired agent-based model.
-The current model is computational and exploratory. It is not yet calibrated or
-validated against measured sheep trajectories, and novelty has not been established.
+Research software for studying how persistent individual differences can alter collective
+heading dynamics in a sheep-inspired agent-based model. The code is deliberately
+structured to separate **focal responsiveness**, **outgoing influence**, **directed social
+ties**, **metric interaction range**, and **update convention**. It is not yet calibrated
+or validated against measured sheep trajectories, so biological and novelty claims remain
+hypotheses rather than established results.
 
-**September 2026 audit:** the historical production script was corrupted by pasted
-shell text. More substantially, historical neighbour searches used the library's
-approximate radius, whose grid spacing increases with box size. New simulations
-now use exact-radius searches. Stored results and the figures below describe the
-**legacy approximate-search model**, and must not be presented as results of the
-corrected model. See [the audit](docs/AUDIT.md), [model specification](docs/MODEL.md)
-and [research plan](docs/RESEARCH_PLAN.md).
+See the [model specification](docs/MODEL.md), [simulation validation protocol](docs/EXPERIMENT_PROTOCOL.md),
+[research plan](docs/RESEARCH_PLAN.md), [novelty matrix](docs/NOVELTY_MATRIX.md), and
+[repository audit](docs/AUDIT.md).
 
-## What is implemented
+## Current model architecture
 
-- Agents have persistent individual response weights `w` drawn independently from
-  a Beta distribution with target mean 0.7 and standard deviation σ.
-- Each agent blends its own heading with the average heading vector of neighbours.
-  Its `w` measures response to others, not the influence it exerts on others.
-- Agents move at constant speed in a periodic 2D square with uniform angular noise.
-- Updates are sequential and in place, using `Schedulers.fastest`, rather than
-  synchronous classical Vicsek updates. Exact metric neighbours exclude the focal agent.
-- φ measures heading alignment, not spatial cohesion, leadership or welfare.
-- No empirically estimated social network or GPS calibration is implemented.
+For focal individual `i`, the model distinguishes three interaction components:
 
-The Beta **distribution** mean is fixed. Realized group means fluctuate, ranging
-from 0.6428 to 0.7546 in the stored production runs. Increasing σ changes the entire
-bounded distribution, including its tail fractions, not variance alone.
+- `r_i`, persistent responsiveness, how strongly `i` changes its own direction in response to neighbours;
+- `q_j`, outgoing influence, how strongly neighbour `j` contributes when used by others;
+- `A_ij`, an optional directed dyadic tie, how strongly focal `i` weights neighbour `j`.
 
-## What the stored data support
+Neighbour contributions are normalized over currently available metric neighbours, then
+blended with the focal individual's own heading. If no tie matrix is supplied and all
+outgoing influence weights equal one, the model reduces exactly to the unweighted
+heterogeneous-response baseline. This reduction is covered by automated tests.
 
-There are 1,140 production runs (N=200, three noise levels, 19 dispersion levels,
-20 seeds) and 1,520 exploratory size-comparison runs (N=100,200,400,800,1600;
-η=0.5; 19 dispersion levels; 16 seeds). Their summary tables match the stored
-replicate data. This consistency does not establish simulation provenance.
+Additional safeguards now include:
 
-At N=200 the legacy data show decreasing average heading order with dispersion.
-The following are descriptive crossings of the arbitrary φ=0.90 level, not
-critical points or biological tolerance limits:
+- exact periodic-radius neighbour search by default;
+- both sequential and synchronous update modes as explicit scientific controls;
+- independent random streams for traits, initial states and dynamical noise;
+- crossed trait and dynamic realizations in corrected production and finite-size sweeps;
+- per-run autocorrelation, effective-sample-size, block and window-drift diagnostics;
+- matched exact-versus-approximate and sequential-versus-synchronous control experiments;
+- source, environment, seed-design and hash metadata for new simulation output.
 
-| Noise η | σ at φ=0.90 | 95% bootstrap interval |
-|---|---:|---:|
-| 0.3 | 0.3578 | 0.3543 to 0.3618 |
-| 0.5 | 0.3233 | 0.3176 to 0.3284 |
-| 0.7 | 0.2789 | 0.2732 to 0.2835 |
+`phi` is heading order only. It is not a spatial-cohesion, leadership, welfare or causal-
+influence measure.
 
-Intervals resample whole seed curves, 2,000 times. They quantify realization
-uncertainty conditional on this model and grid, not model error or interpolation
-bias. The φ=0.50 level is not reached in the stored mean curves.
+## Historical stored data
+
+The repository preserves historical simulation tables so earlier results remain auditable.
+Those tables were generated with the library's legacy approximate neighbour search and
+must not be represented as output from the corrected exact-radius model.
+
+There are 1,140 stored production replicates at N=200 and 1,520 stored finite-size
+replicates across N=100, 200, 400, 800 and 1600. Their aggregate tables reproduce from the
+stored replicate rows. The historical finite-size data do not establish a phase transition:
+323 of 1,520 runs exceed the existing drift warning threshold, and most pooled fluctuation
+maxima occur at the sampled boundary. See [AUDIT.md](docs/AUDIT.md) for the numerical audit.
 
 ![Legacy approximate-search production results](figures/fig_main_v2.png)
 
-The size comparison cannot establish a phase transition: the interaction search
-is confounded with size, 323/1,520 runs exceed the drift warning threshold of 0.02,
-and four of five pooled fluctuation maxima occur at the largest sampled σ.
-Lag-1 correlation alone does not demonstrate critical slowing down. The short-run
-diagnostic **underestimates** order by 0.1344 at σ=0.35; earlier wording reversed
-this sign. Small drift of seed-averaged curves does not establish per-run stationarity.
+## Software verification
 
-## Reproduce the stored-data analysis
+The CI workflow installs Julia 1.10.5 and Python 3.12, runs Julia and Python tests, audits
+stored tables, regenerates legacy figures, and executes smoke versions of the corrected
+production, finite-size and matched-control experiments.
 
-Run from the repository root. Python 3.12 is the CI target; the Python environment
-used during the audit is recorded in `requirements.txt`. The existing Julia
-manifest records Julia 1.10.5 and Agents.jl 7.0.2. It was preserved, not regenerated.
+Run locally from the repository root:
 
 ```bash
 python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
-python src/audit_results.py
-python src/analyze_production.py
-python src/make_main_figure.py
-python src/analyze_fss.py
-python src/make_snapshots.py
-```
-
-The audit writes checksums, recomputed threshold intervals, decomposed fluctuation
-statistics and a list of runs requiring stationarity review to `results/audit/`.
-Original simulation CSVs are preserved. Plot scripts regenerate the tracked figures.
-
-## Run the corrected simulations
-
-```bash
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --project=. tests/runtests.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/production_sweep.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/fss_sweep.jl
-# Full runs are computational experiments, not completed by the audit:
-julia --project=. --threads=auto src/production_sweep.jl
-julia --project=. --threads=auto src/fss_sweep.jl
+ABM_SMOKE=1 julia --project=. --threads=2 src/control_sweep.jl
 ```
 
-Smoke runs use tiny populations and 120 steps and provide no scientific evidence.
-Full defaults retain the historical run lengths, which still require convergence
-assessment. Exact-search results go to `results/exact_production/` and
-`results/exact_fss/`; source hashes and parameters are recorded alongside them.
-`ABM_OUTPUT_DIR` overrides the output folder. Repeated runs overwrite that folder.
-`ABM_NEIGHBOR_SEARCH=approximate` explicitly selects the legacy search convention
-and defaults to separate `results/approximate_*` folders.
+Smoke runs test software paths only. They provide no scientific evidence.
 
-To analyze a new production run without replacing the legacy figures:
+## Corrected full experiments
+
+The validation protocol specifies three main computational stages:
 
 ```bash
-ABM_DATA_LABEL="Exact-radius results" ABM_ANALYSIS_DIR=results/exact_production ABM_FIGURE_DIR=figures/exact python src/analyze_production.py
-ABM_DATA_LABEL="Exact-radius results" ABM_ANALYSIS_DIR=results/exact_production ABM_FIGURE_DIR=figures/exact python src/make_main_figure.py
-ABM_DATA_LABEL="Exact-radius results" ABM_ANALYSIS_DIR=results/exact_fss ABM_FIGURE_DIR=figures/exact ABM_AUDIT_DIR=results/exact_audit python src/analyze_fss.py
+julia --project=. --threads=auto src/production_sweep.jl
+julia --project=. --threads=auto src/fss_sweep.jl
+julia --project=. --threads=auto src/control_sweep.jl
 ```
 
-`diag_equilibration.jl`, `diag_relaxation.jl` and `snapshot_states.jl` now also use
-exact searches and write separate `exact_diagnostics` or `exact_snapshots` folders.
-The 500-step direct invocation of `heterogeneous_model_v2.jl` is only a pilot.
+The production sweep uses exact metric neighbours, N=200, three noise levels, 19
+responsiveness-dispersion values, and a 5 by 4 crossed design of trait and dynamic
+realizations. The finite-size experiment uses N=100 to 1600 at fixed density with a 4 by 4
+crossed design. The matched control experiment reuses the same trait, initialization and
+dynamical seeds across neighbour-search and update conventions.
 
-## Research direction and citation
+Full runs are computationally expensive and should be performed on appropriate compute
+resources. New outputs are kept separate from the historical tables and include
+`run_metadata.toml` provenance information.
 
-The priority is a comparison of homogeneous response, heterogeneous response,
-recognised social ties, and their combination, evaluated on held-out sheep
-trajectories. A successful contribution would explain when measured social
-relationships and individual states improve prediction beyond simpler baselines.
-See the [specific hypotheses, controls and data requirements](docs/RESEARCH_PLAN.md).
+## Candidate research contribution
 
-Related work already studies heterogeneous social networks, individualistic motion
-and differential leadership. See [prior research](docs/RESEARCH_PLAN.md#prior-research).
-A Beta sweep by itself does not establish novelty.
+The broad claims that individual heterogeneity matters, that sheep can exhibit leadership,
+or that social interaction structure affects collective motion are already established in
+the literature. They are therefore not treated as the project's novelty.
+
+The stronger candidate question is whether **individual responsiveness, partner-specific
+social weighting and outgoing influence can be separated mechanistically and statistically,
+and whether doing so improves held-out prediction of sheep movement beyond simpler nested
+models**. The planned hierarchy is:
+
+| Model | Responsiveness | Dyadic ties | Outgoing influence |
+|---|---|---|---|
+| M0 | common | uniform | fixed 1 |
+| M1 | individual | uniform | fixed 1 |
+| M2 | common | measured/estimated | fixed 1 |
+| M3 | individual | measured/estimated | fixed 1 |
+| M4 | individual | measured/estimated | estimated only if identifiable |
+
+A future empirical study should use complete held-out groups, days or movement bouts,
+independently estimated social ties, parameter-recovery tests, and proximity-only and
+shuffled-network controls. See [NOVELTY_MATRIX.md](docs/NOVELTY_MATRIX.md) for the evidence
+required before making a novelty claim.
+
+## Citation and license
 
 See `CITATION.cff` for software citation and `LICENSE` for the MIT license.
