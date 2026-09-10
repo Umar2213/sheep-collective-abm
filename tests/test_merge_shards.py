@@ -1,0 +1,70 @@
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from merge_shards import merge_shards
+
+
+class MergeShardTests(unittest.TestCase):
+    def _write_shard(self, root, idx, sigma, duplicate=False):
+        directory = root / f"shard_{idx:03d}_of_002"
+        directory.mkdir(parents=True)
+        (directory / "run_metadata.toml").write_text(
+            "\n".join([
+                'experiment = "production"',
+                f"shard_index = {idx}",
+                "shard_count = 2",
+                "full_condition_count = 2",
+                "full_run_count = 4",
+            ]) + "\n",
+            encoding="utf-8",
+        )
+        sigma_value = 0.0 if duplicate else sigma
+        pd.DataFrame({
+            "sigma_std": [sigma_value, sigma_value],
+            "noise": [0.5, 0.5],
+            "trait_rep": [idx, idx],
+            "dynamic_rep": [1, 2],
+            "phi": [0.9 - 0.1 * idx, 0.89 - 0.1 * idx],
+        }).to_csv(directory / "sweep_replicates.csv", index=False)
+        pd.DataFrame({
+            "sigma_std": [sigma_value],
+            "noise": [0.5],
+            "phi_mean": [0.895 - 0.1 * idx],
+        }).to_csv(directory / "sweep_condition_means.csv", index=False)
+
+    def test_complete_production_merge(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_shard(root, 1, 0.0)
+            self._write_shard(root, 2, 0.3)
+            report = merge_shards(root, "production")
+            self.assertEqual(report["replicate_rows"], 4)
+            self.assertEqual(report["condition_summary_rows"], 2)
+            merged = pd.read_csv(root / "merged" / "sweep_replicates.csv")
+            self.assertEqual(len(merged), 4)
+            self.assertEqual(sorted(merged.sigma_std.unique().tolist()), [0.0, 0.3])
+            self.assertTrue((root / "merged" / "merge_report.json").exists())
+
+    def test_missing_shard_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_shard(root, 1, 0.0)
+            with self.assertRaisesRegex(ValueError, "Incomplete shard set"):
+                merge_shards(root, "production")
+
+    def test_duplicate_condition_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_shard(root, 1, 0.0)
+            self._write_shard(root, 2, 0.3, duplicate=True)
+            with self.assertRaisesRegex(ValueError, "Duplicate condition summaries"):
+                merge_shards(root, "production")
+
+
+if __name__ == "__main__":
+    unittest.main()
