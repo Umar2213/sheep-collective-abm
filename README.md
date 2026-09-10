@@ -38,6 +38,8 @@ Additional safeguards now include:
 - matched exact-versus-approximate and sequential-versus-synchronous control experiments;
 - deterministic condition-level sharding for distributed full runs;
 - verified shard aggregation that rejects missing shards and duplicate replicate keys;
+- one-step parameter-recovery utilities for focal responsiveness;
+- an explicit structural test showing that unconstrained dyadic ties and outgoing influence are not separately identifiable under column rescaling;
 - source, environment, seed-design and hash metadata for new simulation output.
 
 `phi` is heading order only. It is not a spatial-cohesion, leadership, welfare or causal-
@@ -93,6 +95,13 @@ realizations. The finite-size experiment uses N=100 to 1600 at fixed density wit
 crossed design. The matched control experiment reuses the same trait, initialization and
 dynamical seeds across neighbour-search and update conventions.
 
+Before launching the full grid, benchmark the actual machine that will run it:
+
+```bash
+ABM_BENCHMARK_N=200 ABM_BENCHMARK_STEPS=1000 julia --project=. src/benchmark_compute.jl
+ABM_BENCHMARK_N=1600 ABM_BENCHMARK_STEPS=1000 julia --project=. src/benchmark_compute.jl
+```
+
 Full runs are computationally expensive. Each entry point can therefore be split over
 multiple independent compute tasks. Sharding is by complete scientific conditions, so all
 replicates for a condition stay together. For example, an eight-part production run can be
@@ -117,16 +126,35 @@ incorrect total row counts before writing a `merged/` dataset and `merge_report.
 New outputs are kept separate from the historical tables and include `run_metadata.toml`
 provenance information.
 
+## Identifiability before biological interpretation
+
+`src/identifiability.py` contains a small parameter-recovery layer for the one-step heading
+rule. Tests verify that focal responsiveness can be recovered from informative synthetic
+heading updates when the other components are known. They also verify a structural
+non-identifiability in the unconstrained social-weight model: multiplying each column of
+`A_ij` by a positive constant and dividing the corresponding `q_j` by the same constant
+leaves every product `A_ij q_j` unchanged. Therefore outgoing influence must not be fitted
+as a separate biological quantity unless independent constraints or recovery experiments
+break that equivalence.
+
+This negative result is scientifically useful. The model should be simplified when the
+data cannot identify a parameter rather than reporting a precise but uninterpretable
+estimate.
+
 ## Candidate research contribution
 
-The broad claims that individual heterogeneity matters, that sheep can exhibit leadership,
-or that social interaction structure affects collective motion are already established in
-the literature. They are therefore not treated as the project's novelty.
+The broad claims that individual heterogeneity matters, that individuals can have distinct
+interaction rules, that sheep can exhibit leadership, or that social interaction structure
+affects collective motion are already established in the literature. They are therefore
+not treated as the project's novelty.
 
-The stronger candidate question is whether **individual responsiveness, partner-specific
-social weighting and outgoing influence can be separated mechanistically and statistically,
-and whether doing so improves held-out prediction of sheep movement beyond simpler nested
-and alternative behavioural models**. The planned hierarchy is:
+The stronger candidate question is whether **individual responsiveness and independently
+characterized partner-specific social relationships provide non-redundant, identifiable
+and out-of-sample predictive information in sheep movement, under matched computational
+controls and alternative movement kernels**. Outgoing influence is included only if its
+identifiability can be demonstrated.
+
+The planned hierarchy is:
 
 | Model | Responsiveness | Dyadic ties | Outgoing influence |
 |---|---|---|---|
