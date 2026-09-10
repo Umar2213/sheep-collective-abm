@@ -1,0 +1,93 @@
+{
+  "source_tables": [
+    {
+      "path": "results/diagnostics/equilibration_summary.csv",
+      "rows": 6,
+      "columns": 9,
+      "sha256": "e8b38ef092b9d0c517530f9184dba73f55bda99d166feb26dab10ec4cda96b71"
+    },
+    {
+      "path": "results/diagnostics/equilibration_timeseries.csv",
+      "rows": 3600,
+      "columns": 3,
+      "sha256": "bc9333385fa0eeacf7e8a4a8b657a2421f3f0a5df79ca051755c36b948b01b21"
+    },
+    {
+      "path": "results/diagnostics/relaxation_summary.csv",
+      "rows": 5,
+      "columns": 7,
+      "sha256": "208e411c0d5fdb14c3a2723905ceeda0b7eae03b225e35f08ff1646446ea753c"
+    },
+    {
+      "path": "results/diagnostics/relaxation_timeseries.csv",
+      "rows": 18000,
+      "columns": 4,
+      "sha256": "7ac65168f95bfdab4dfdb5f83d1f7fa29ac1a3a818bf9686b333f811eb86b324"
+    },
+    {
+      "path": "results/fss/fss_condition_means.csv",
+      "rows": 95,
+      "columns": 10,
+      "sha256": "6e59ab01e083461eaacbacda8a694a228e8a1a5f154df0d2c146bdc97235c9b1"
+    },
+    {
+      "path": "results/fss/fss_replicates.csv",
+      "rows": 1520,
+      "columns": 10,
+      "sha256": "2de1507aafe7b9a744583fd5865183b3ec7449a35c596d263e6c7175249c48fc"
+    },
+    {
+      "path": "results/production/sweep_condition_means.csv",
+      "rows": 57,
+      "columns": 10,
+      "sha256": "c50913925bfc275988e305c86fa846f668014d13689bdcb8c41b9621681b0f5c"
+    },
+    {
+      "path": "results/production/sweep_replicates.csv",
+      "rows": 1140,
+      "columns": 10,
+      "sha256": "6ee1ab14ab7fff3105213e1910d70010c0bf6004d0d16c7199f53fe4797d9a1e"
+    },
+    {
+      "path": "results/snapshots/snapshot_states.csv",
+      "rows": 800,
+      "columns": 5,
+      "sha256": "0b96904ad8adf09d5a0124ff7520bf1a5470b7a251a097b306218dcc26fdc83c"
+    }
+  ],
+  "production_runs": 1140,
+  "fss_runs": 1520,
+  "fss_drift_over_002": 323,
+  "fss_max_drift": 0.1811015228786109,
+  "production_real_mean_range": [
+    0.6428400760704969,
+    0.7546449146069579
+  ],
+  "thresholds": [
+    {
+      "noise": 0.3,
+      "sigma_at_phi_090": 0.3577838398844765,
+      "bootstrap_lo": 0.35431782334473333,
+      "bootstrap_hi": 0.3617850600321997,
+      "bracketed_bootstraps": 2000,
+      "bootstrap_count": 2000
+    },
+    {
+      "noise": 0.5,
+      "sigma_at_phi_090": 0.32327150519668174,
+      "bootstrap_lo": 0.3176430593170092,
+      "bootstrap_hi": 0.32844567610869224,
+      "bracketed_bootstraps": 2000,
+      "bootstrap_count": 2000
+    },
+    {
+      "noise": 0.7,
+      "sigma_at_phi_090": 0.27887348583907834,
+      "bootstrap_lo": 0.2731909399642623,
+      "bootstrap_hi": 0.2835011867363698,
+      "bracketed_bootstraps": 2000,
+      "bootstrap_count": 2000
+    }
+  ],
+  "scope": "Stored-data consistency only; no proof of simulation provenance or stationarity."
+}

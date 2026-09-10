@@ -1,39 +1,30 @@
 # fss_sweep_v2.jl — finite-size-scaling sweep at FIXED DENSITY.
 #
-# Same physics as fss_sweep.jl. Only the parallel scheduling and observability
-# are fixed:
-#   1. jobs ordered LARGEST-N first  -> longest runs start immediately,
-#      short runs backfill (longest-processing-time-first heuristic).
-#   2. Threads.@threads :dynamic     -> idle threads steal remaining work,
-#      so all 128 cores stay busy instead of stranding the N=1600 runs on ~26.
-#   3. flush(stdout) on every line   -> `tail -f fss_run.log` updates live,
-#      with a rough ETA, so the run is never a black box again.
-# Expected wall time on 128 cores: ~3 h (vs ~22 h for the static version).
-#
-# Run (survives SSH disconnect):
-#   cd ~/sheep_clean
-#   nohup julia --project=. --threads=auto src/fss_sweep_v2.jl > fss_run.log 2>&1 &
-#   echo "PID $!"
-#   tail -f fss_run.log        # now actually shows progress
+# Jobs are ordered by size. Dynamic scheduling does not guarantee per-job work
+# stealing or a particular runtime. Measure performance on the target machine.
+# Run: julia --project=. --threads=auto src/fss_sweep_v2.jl
 include(joinpath(@__DIR__, "heterogeneous_model_v2.jl"))
+include(joinpath(@__DIR__, "run_metadata.jl"))
 using Statistics, DataFrames, CSV, Printf, Dates
 
+const NEIGHBOR_SEARCH = Symbol(get(ENV, "ABM_NEIGHBOR_SEARCH", "exact"))
+const SMOKE = get(ENV, "ABM_SMOKE", "0") == "1"
 const SIGMA_MEAN = 0.7
-const SIGMA_LIST = collect(0.0:0.025:0.45)        # same grid as production
+const SIGMA_LIST = SMOKE ? [0.0,0.3] : collect(0.0:0.025:0.45)        # same grid as production
 const NOISE      = 0.5                             # headline noise level
-const N_LIST     = [100, 200, 400, 800, 1600]
-const N_SEEDS    = 16
-const N_TOTAL    = 80000
-const N_WARMUP   = 40000                            # critical slowing down grows with N
+const N_LIST     = SMOKE ? [12,24] : [100, 200, 400, 800, 1600]
+const N_SEEDS    = SMOKE ? 2 : 16
+const N_TOTAL    = SMOKE ? 120 : 80000
+const N_WARMUP   = SMOKE ? 60 : 40000                            # provisional warmup; verify convergence
 const RHO        = 200 / 20.0^2                     # = 0.5, the canonical density
-const OUTDIR     = joinpath(@__DIR__, "..", "results", "fss")
+const OUTDIR     = get(ENV, "ABM_OUTPUT_DIR", joinpath(@__DIR__, "..", "results", SMOKE ? "smoke_fss" : string(NEIGHBOR_SEARCH, "_fss")))
 
 Lfor(N) = sqrt(N / RHO)                             # constant-density box side
 lag1(x) = cor(@view(x[1:end-1]), @view(x[2:end]))
 
 function run_one(; N, sigma_std, seed)
     model, sv = create_sheep_model(; N=N, L=Lfor(N), noise=NOISE,
-        σ_mean=SIGMA_MEAN, σ_std=sigma_std, seed=seed)
+        σ_mean=SIGMA_MEAN, σ_std=sigma_std, seed=seed, neighbor_search=NEIGHBOR_SEARCH)
     for _ in 1:N_TOTAL; step!(model); end
     meas = model.order_history[(N_WARMUP+1):end]
     m1 = mean(meas)
@@ -71,6 +62,7 @@ Threads.@threads :dynamic for i in eachindex(jobs)
 end
 
 raw = DataFrame(res)
+write_run_metadata(OUTDIR; N=N_LIST, density=RHO, noise=NOISE, sigma=SIGMA_LIST, seeds=N_SEEDS, total=N_TOTAL, warmup=N_WARMUP, smoke=SMOKE, neighbor_search=string(NEIGHBOR_SEARCH))
 CSV.write(joinpath(OUTDIR, "fss_replicates.csv"), raw)
 
 summ = combine(groupby(raw, [:N, :sigma_std])) do sub
@@ -97,6 +89,6 @@ for Ni in N_LIST
     @printf("   %5d |  %.3f | %.4f |  %.4f\n",
         Ni, s.sigma_std[j], s.chi[j], maximum(s.drift))
 end
-println("\n  wrote results/fss/fss_replicates.csv + fss_condition_means.csv")
+println("\n  wrote FSS tables in $OUTDIR")
 @printf("  total wall time: %.1f min\n", (time() - T0) / 60)
 flush(stdout)
