@@ -14,7 +14,7 @@ plt.rcParams.update({"font.family":"DejaVu Sans","font.size":11,
 
 fig, axes = plt.subplots(1, len(sigmas), figsize=(4*len(sigmas), 4.6))
 for ax, s in zip(np.atleast_1d(axes), sigmas):
-    d = df[df.sigma==s]; th = d.theta.values
+    d = df[df.sigma==s]; th = (d.theta.values + np.pi) % (2*np.pi) - np.pi
     phi = np.hypot(np.cos(th).mean(), np.sin(th).mean())
     q = ax.quiver(d.x, d.y, np.cos(th), np.sin(th), th, cmap="twilight",
                   clim=(-np.pi, np.pi), scale=28, width=0.007,
@@ -23,7 +23,7 @@ for ax, s in zip(np.atleast_1d(axes), sigmas):
     ax.set_xticks([]); ax.set_yticks([])
     ax.set_title(f"σ = {s:.2f}    φ = {phi:.2f}")
 
-fig.suptitle("Flock heading directions: order dissolves as trait dispersion rises  (η = 0.5)",
+fig.suptitle("Legacy approximate-search snapshots  (η = 0.5)",
              fontsize=13, fontweight="bold", y=1.03)
 cbar = fig.colorbar(q, ax=np.atleast_1d(axes), orientation="horizontal",
                     fraction=0.045, pad=0.07, ticks=[-np.pi,0,np.pi])
