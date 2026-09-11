@@ -84,6 +84,28 @@ class IdentifiabilityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fit_responsiveness([0, 1], [1, 0], [0, 1], [0, 1])
 
+    def test_flat_loss_is_not_an_estimate(self):
+        with self.assertRaisesRegex(ValueError, "not identifiable"):
+            fit_responsiveness(np.zeros(5), np.ones(5), np.zeros(5), np.zeros(5))
+
+    def test_boundary_optima_are_considered(self):
+        headings = np.linspace(-1, 1, 20)
+        nx, ny = np.cos(headings + 0.8), np.sin(headings + 0.8)
+        for r in [0.0, 1.0]:
+            observed = blended_heading(headings, nx, ny, r)
+            fit = fit_responsiveness(headings, nx, ny, observed)
+            self.assertEqual(fit["responsiveness"], r)
+            self.assertTrue(fit["boundary_optimum"])
+
+    def test_large_finite_weights_do_not_overflow(self):
+        out = weighted_neighbour_vector([0, np.pi / 2], [1e300, 1e300], [1e300, 1e300])
+        np.testing.assert_allclose(out, [0.5, 0.5])
+
+    def test_zero_blend_matches_julia_tolerance(self):
+        theta = 1.0
+        nx, ny = -np.cos(theta) + 2e-15, -np.sin(theta)
+        self.assertEqual(float(blended_heading(theta, nx, ny, 0.5)), theta)
+
 
 if __name__ == "__main__":
     unittest.main()

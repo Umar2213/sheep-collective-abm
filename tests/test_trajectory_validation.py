@@ -95,6 +95,35 @@ class TrajectoryValidationTests(unittest.TestCase):
         np.testing.assert_allclose(errors, [0.1, 0.1], atol=1e-12)
         self.assertGreater(mean_cosine_alignment(observed, predicted), 0.99)
 
+    def test_empty_and_missing_ids_rejected(self):
+        with self.assertRaisesRegex(ValueError, "empty"):
+            validate_trajectory_table(example_tracks().iloc[:0])
+        for value in [None, "", "   "]:
+            frame = example_tracks()
+            frame.loc[0, "group_id"] = value
+            with self.assertRaisesRegex(ValueError, "missing identifiers"):
+                validate_trajectory_table(frame)
+
+    def test_folds_populated_and_invariant_to_row_order(self):
+        frame = example_tracks()
+        first = assign_grouped_folds(frame, n_folds=5)
+        second = assign_grouped_folds(frame.sample(frac=1, random_state=2), n_folds=5)
+        keys = ["group_id", "bout_id"]
+        a = first.groupby(keys).fold.first().sort_index()
+        b = second.groupby(keys).fold.first().sort_index()
+        pd.testing.assert_series_equal(a, b)
+        self.assertEqual(set(a), set(range(5)))
+        with self.assertRaisesRegex(ValueError, "already exists"):
+            assign_grouped_folds(first)
+        with self.assertRaisesRegex(ValueError, "distinct biological blocks"):
+            assign_grouped_folds(frame, n_folds=7)
+
+    def test_nonfinite_and_empty_metrics_rejected(self):
+        for observed, predicted in [([], []), ([0], [np.nan]), ([np.inf], [0])]:
+            for metric in [circular_absolute_error, mean_cosine_alignment]:
+                with self.assertRaises(ValueError):
+                    metric(observed, predicted)
+
 
 if __name__ == "__main__":
     unittest.main()
