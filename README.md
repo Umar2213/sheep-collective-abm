@@ -63,7 +63,8 @@ maxima occur at the sampled boundary. See [AUDIT.md](docs/AUDIT.md) for the nume
 
 The CI workflow installs Julia 1.10.5 and Python 3.12, runs Julia and Python tests, audits
 stored tables, regenerates legacy figures, and executes smoke versions of the corrected
-production, finite-size and matched-control experiments.
+production, finite-size, algorithmic-control and distribution-control experiments.
+CI merges actual two-shard Julia outputs for all four experiment families.
 
 Run locally from the repository root:
 
@@ -75,18 +76,20 @@ julia --project=. tests/runtests.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/production_sweep.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/fss_sweep.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/control_sweep.jl
+ABM_SMOKE=1 julia --project=. --threads=2 src/distribution_control.jl
 ```
 
 Smoke runs test software paths only. They provide no scientific evidence.
 
 ## Corrected full experiments
 
-The validation protocol specifies three main computational stages:
+The validation protocol specifies four computational stages:
 
 ```bash
 julia --project=. --threads=auto src/production_sweep.jl
 julia --project=. --threads=auto src/fss_sweep.jl
 julia --project=. --threads=auto src/control_sweep.jl
+julia --project=. --threads=auto src/distribution_control.jl
 ```
 
 The production sweep uses exact metric neighbours, N=200, three noise levels, 19
@@ -119,10 +122,15 @@ With the default output path this produces `shard_001_of_008` through
 python src/merge_shards.py --experiment production --root results/exact_sequential_production
 python src/merge_shards.py --experiment finite_size --root results/exact_sequential_fss
 python src/merge_shards.py --experiment algorithmic_controls --root results/algorithmic_controls
+python src/merge_shards.py --experiment distribution_controls --root results/distribution_controls
 ```
 
 The merger rejects missing shards, inconsistent metadata, duplicate replicate keys and
-incorrect total row counts before writing a `merged/` dataset and `merge_report.json`.
+incorrect total row counts, missing crossed-design keys, nonfinite values and stale heading
+means before publishing a complete `merged/` dataset and `merge_report.json`. Run timestamps
+and thread counts may differ across shards; scientific settings and source hashes must agree.
+The report preserves every shard's metadata and hashes the merged CSVs. Existing output
+directories are rejected; use a fresh `--output` path for a subsequent merge.
 New outputs are kept separate from the historical tables and include `run_metadata.toml`
 provenance information.
 
@@ -169,6 +177,20 @@ independently estimated social ties, parameter-recovery tests, proximity-only an
 shuffled-network controls, and where data permit at least one alternative movement kernel
 that does not assume explicit velocity alignment. See [NOVELTY_MATRIX.md](docs/NOVELTY_MATRIX.md)
 for the evidence required before making a novelty claim.
+
+## Held-out prediction evaluation
+
+`src/prediction_evaluation.py` scores externally generated held-out predictions. It requires
+identical observation coverage and observed headings across models, checks finite angles,
+and reports each biological block separately. `compare_models` computes equal-block paired
+MAE differences with a reproducible block-bootstrap interval. Negative differences favour
+the alternative. It does not fit models or verify how their predictions were produced.
+See [the prediction schema and example](docs/TRAJECTORY_DATA_SPEC.md#scoring-held-out-predictions).
+
+The responsiveness fitter now profiles the bounded loss, refines candidate minima, checks
+both endpoints and rejects flat loss. Profile ambiguity is a numerical warning, not a
+confidence interval or proof of identifiability. See the
+[2026-09-11 integrity review](docs/INTEGRITY_REVIEW_2026-09-11.md) for fixes and remaining gates.
 
 ## Citation and license
 

@@ -8,6 +8,7 @@ interpolating, smoothing, resampling or imputing observations.
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import asdict, dataclass
 from typing import Iterable, Sequence
 
@@ -33,6 +34,7 @@ class TrajectoryAudit:
     bouts: int
     individuals: int
     tracks: int
+    missing_identifiers: int
     duplicate_keys: int
     nonfinite_coordinates: int
     unparseable_timestamps: int
@@ -55,10 +57,16 @@ def _require_columns(frame: pd.DataFrame, required: Sequence[str] = REQUIRED_COL
         raise ValueError(f"Missing required trajectory columns: {missing}")
 
 
+def _missing_ids(frame, columns):
+    return frame[list(columns)].isna().any(axis=1) | frame[list(columns)].apply(
+        lambda col: col.map(lambda value: isinstance(value, str) and not value.strip())
+    ).any(axis=1)
+
+
 def _parsed_copy(frame: pd.DataFrame) -> pd.DataFrame:
     _require_columns(frame)
     data = frame.copy()
-    data["timestamp"] = pd.to_datetime(data["timestamp"], errors="coerce", utc=True)
+    data["timestamp"] = pd.to_datetime(data["timestamp"], errors="coerce", utc=True, format="mixed")
     data["x"] = pd.to_numeric(data["x"], errors="coerce")
     data["y"] = pd.to_numeric(data["y"], errors="coerce")
     return data
@@ -110,6 +118,7 @@ def audit_trajectory_table(frame: pd.DataFrame) -> TrajectoryAudit:
         bouts=int(data[["group_id", "bout_id"]].drop_duplicates().shape[0]),
         individuals=int(data["individual_id"].nunique(dropna=False)),
         tracks=int(len(track_sizes)),
+        missing_identifiers=int(_missing_ids(data, KEY_COLUMNS[:3]).sum()),
         duplicate_keys=duplicate_keys,
         nonfinite_coordinates=nonfinite_coordinates,
         unparseable_timestamps=unparseable_timestamps,
@@ -132,6 +141,10 @@ def validate_trajectory_table(frame: pd.DataFrame) -> tuple[pd.DataFrame, Trajec
     data = _parsed_copy(frame)
     audit = audit_trajectory_table(data)
     failures = []
+    if not len(data):
+        failures.append("empty trajectory table")
+    if audit.missing_identifiers:
+        failures.append(f"{audit.missing_identifiers} rows with missing identifiers")
     if audit.unparseable_timestamps:
         failures.append(f"{audit.unparseable_timestamps} unparseable timestamps")
     if audit.nonfinite_coordinates:
@@ -150,7 +163,7 @@ def validate_trajectory_table(frame: pd.DataFrame) -> tuple[pd.DataFrame, Trajec
 
 
 def _stable_fold_key(values: Iterable[object], salt: str = "sheep-collective-abm") -> int:
-    raw = "\x1f".join(str(value) for value in values)
+    raw = json.dumps([str(value) for value in values], ensure_ascii=False, separators=(",", ":"))
     digest = hashlib.sha256((salt + "\x1e" + raw).encode("utf-8")).digest()
     return int.from_bytes(digest[:8], "big", signed=False)
 
@@ -164,7 +177,7 @@ def assign_grouped_folds(
     fold_column: str = "fold",
 ) -> pd.DataFrame:
     """Assign deterministic folds without splitting any complete biological block."""
-    if not isinstance(n_folds, int) or n_folds < 2:
+    if isinstance(n_folds, bool) or not isinstance(n_folds, int) or n_folds < 2:
         raise ValueError("n_folds must be an integer >= 2")
     missing = [column for column in block_columns if column not in frame.columns]
     if missing:
@@ -172,12 +185,22 @@ def assign_grouped_folds(
     if not block_columns:
         raise ValueError("block_columns must contain at least one column")
 
+    if fold_column in frame.columns:
+        raise ValueError(f"Fold column already exists: {fold_column}")
+    if len(set(block_columns)) != len(block_columns):
+        raise ValueError("Blocking columns must be unique")
+    if _missing_ids(frame, block_columns).any():
+        raise ValueError("Missing identifiers in blocking columns")
+    if frame[list(block_columns)].drop_duplicates().shape[0] < n_folds:
+        raise ValueError("At least n_folds distinct biological blocks are required")
     result = frame.copy()
     blocks = result[list(block_columns)].drop_duplicates().copy()
-    blocks[fold_column] = [
-        _stable_fold_key(values, salt=salt) % n_folds
-        for values in blocks.itertuples(index=False, name=None)
-    ]
+    hashes = [_stable_fold_key(values, salt=salt)
+              for values in blocks.itertuples(index=False, name=None)]
+    order = np.argsort(hashes, kind="stable")
+    folds = np.empty(len(blocks), dtype=int)
+    folds[order] = np.arange(len(blocks)) % n_folds
+    blocks[fold_column] = folds
     result = result.merge(blocks, on=list(block_columns), how="left", validate="many_to_one")
     if result[fold_column].isna().any():
         raise RuntimeError("Fold assignment unexpectedly produced missing fold values")
@@ -195,6 +218,8 @@ def circular_absolute_error(observed_heading, predicted_heading) -> np.ndarray:
     predicted = np.asarray(predicted_heading, dtype=float)
     if observed.shape != predicted.shape:
         raise ValueError("Observed and predicted headings must have matching shapes")
+    if observed.size == 0 or not (np.isfinite(observed).all() and np.isfinite(predicted).all()):
+        raise ValueError("At least one finite heading pair is required")
     delta = np.arctan2(np.sin(predicted - observed), np.cos(predicted - observed))
     return np.abs(delta)
 
@@ -205,6 +230,5 @@ def mean_cosine_alignment(observed_heading, predicted_heading) -> float:
     predicted = np.asarray(predicted_heading, dtype=float)
     if observed.shape != predicted.shape:
         raise ValueError("Observed and predicted headings must have matching shapes")
-    if observed.size == 0:
-        raise ValueError("At least one heading pair is required")
+    circular_absolute_error(observed, predicted)
     return float(np.mean(np.cos(predicted - observed)))

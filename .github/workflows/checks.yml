@@ -38,15 +38,30 @@ jobs:
       - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
       - run: julia --project=. tests/runtests.jl
       - run: julia --project=. tests/trait_distributions.jl
-      - run: julia --project=. --threads=2 src/production_sweep.jl
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Generate and merge actual Julia smoke shards for all experiments
+        shell: bash
         env:
           ABM_SMOKE: '1'
-      - run: julia --project=. --threads=2 src/fss_sweep.jl
-        env:
-          ABM_SMOKE: '1'
-      - run: julia --project=. --threads=2 src/control_sweep.jl
-        env:
-          ABM_SMOKE: '1'
+          ABM_SHARD_COUNT: '2'
+        run: |
+          set -euo pipefail
+          for experiment in production finite_size algorithmic_controls distribution_controls; do
+            case "$experiment" in
+              production) script=production_sweep.jl ;;
+              finite_size) script=fss_sweep.jl ;;
+              algorithmic_controls) script=control_sweep.jl ;;
+              distribution_controls) script=distribution_control.jl ;;
+            esac
+            export ABM_OUTPUT_DIR="$RUNNER_TEMP/abm-smoke/$experiment"
+            for shard in 1 2; do
+              ABM_SHARD_INDEX="$shard" julia --project=. --threads=2 "src/$script"
+            done
+            python src/merge_shards.py --experiment "$experiment" --root "$ABM_OUTPUT_DIR"
+          done
       - run: julia --project=. src/benchmark_compute.jl
         env:
           ABM_BENCHMARK_N: '12'

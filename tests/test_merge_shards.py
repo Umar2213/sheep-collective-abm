@@ -19,7 +19,13 @@ class MergeShardTests(unittest.TestCase):
                 f"shard_index = {idx}",
                 "shard_count = 2",
                 "full_condition_count = 2",
+                "trait_replicates = 1",
+                "dynamic_replicates = 2",
                 "full_run_count = 4",
+                'sigma = [0.0, 0.3]',
+                'noise = [0.5]',
+                'recorded_utc = "2026-09-11T00:00:0' + str(idx) + '"',
+                'threads = ' + str(idx),
             ]) + "\n",
             encoding="utf-8",
         )
@@ -27,7 +33,7 @@ class MergeShardTests(unittest.TestCase):
         pd.DataFrame({
             "sigma_std": [sigma_value, sigma_value],
             "noise": [0.5, 0.5],
-            "trait_rep": [idx, idx],
+            "trait_rep": [1, 1],
             "dynamic_rep": [1, 2],
             "phi": [0.9 - 0.1 * idx, 0.89 - 0.1 * idx],
         }).to_csv(directory / "sweep_replicates.csv", index=False)
@@ -47,6 +53,8 @@ class MergeShardTests(unittest.TestCase):
                 "shard_count = 2",
                 "full_condition_count = 2",
                 "full_run_count = 4",
+                "sigma = [0.1, 0.3]",
+                "noise = [0.5]",
                 "trait_replicates = 1",
                 "dynamic_replicates = 1",
                 'trait_families = ["beta", "two_point"]',
@@ -109,7 +117,7 @@ class MergeShardTests(unittest.TestCase):
             root = Path(tmp)
             self._write_production_shard(root, 1, 0.0)
             self._write_production_shard(root, 2, 0.3, duplicate=True)
-            with self.assertRaisesRegex(ValueError, "Duplicate condition summaries"):
+            with self.assertRaisesRegex(ValueError, "Duplicate (condition summaries|replicate keys)"):
                 merge_shards(root, "production")
 
     def test_distribution_merge_includes_paired_outputs(self):
@@ -132,6 +140,51 @@ class MergeShardTests(unittest.TestCase):
             self._write_distribution_shard(root, 2, 0.3, duplicate_pair=True)
             with self.assertRaisesRegex(ValueError, "Duplicate keys found in paired_distribution_effects"):
                 merge_shards(root, "distribution_controls")
+
+    def test_wrong_replicate_id_with_correct_row_count_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_production_shard(root, 1, 0.0)
+            self._write_production_shard(root, 2, 0.3)
+            path = root / "shard_002_of_002/sweep_replicates.csv"
+            frame = pd.read_csv(path)
+            frame.loc[0, "dynamic_rep"] = 99
+            frame.to_csv(path, index=False)
+            with self.assertRaisesRegex(ValueError, "design keys"):
+                merge_shards(root, "production")
+            self.assertFalse((root / "merged").exists())
+
+    def test_failed_supplemental_leaves_no_partial_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_distribution_shard(root, 1, 0.1)
+            self._write_distribution_shard(root, 2, 0.3)
+            (root / "shard_002_of_002/paired_distribution_summary.csv").unlink()
+            with self.assertRaisesRegex(ValueError, "Missing required shard file"):
+                merge_shards(root, "distribution_controls")
+            self.assertFalse((root / "merged").exists())
+
+    def test_stale_summary_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_production_shard(root, 1, 0.0)
+            self._write_production_shard(root, 2, 0.3)
+            path = root / "shard_002_of_002/sweep_condition_means.csv"
+            frame = pd.read_csv(path)
+            frame.loc[0, "phi_mean"] = 0.1
+            frame.to_csv(path, index=False)
+            with self.assertRaisesRegex(ValueError, "does not reproduce"):
+                merge_shards(root, "production")
+
+    def test_scientific_metadata_difference_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_production_shard(root, 1, 0.0)
+            self._write_production_shard(root, 2, 0.3)
+            path = root / "shard_002_of_002/run_metadata.toml"
+            path.write_text(path.read_text() + 'git_commit = "different"\n')
+            with self.assertRaisesRegex(ValueError, "inconsistent"):
+                merge_shards(root, "production")
 
 
 if __name__ == "__main__":

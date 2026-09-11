@@ -5,6 +5,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import hashlib
+import itertools
+import shutil
+import tempfile
+
+import numpy as np
 import re
 import tomllib
 from pathlib import Path
@@ -87,6 +93,7 @@ def _validate_metadata_consistency(metadata: list[dict]) -> None:
     ignored = {
         "shard_index", "shard_condition_count", "shard_run_count",
         "timestamp_utc", "hostname", "julia_threads",
+        "recorded_utc", "threads",
     }
     reference = {k: v for k, v in metadata[0].items() if k not in ignored}
     for idx, meta in enumerate(metadata[1:], start=2):
@@ -96,9 +103,46 @@ def _validate_metadata_consistency(metadata: list[dict]) -> None:
             raise ValueError(f"Shard metadata are inconsistent, shard {idx} differs in: {differing}")
 
 
-def _merge_supplemental(shard_dirs, metadata, specs, output: Path) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    first_meta = metadata[0]
+def _key_set(frame, keys):
+    if frame[keys].isna().any().any():
+        raise ValueError("Missing values in scientific keys")
+    # Julia ranges and CSV parsers can differ in their final floating-point bit.
+    return {tuple(round(v, 12) if isinstance(v, (float, np.floating)) else v
+                  for v in row)
+            for row in frame[keys].itertuples(index=False, name=None)}
+
+
+def _expected_design(meta, cfg):
+    axes = {"sigma_std": meta["sigma"], "noise": meta["noise"],
+            "N": meta.get("N"), "search_mode": meta.get("search_modes"),
+            "update_mode": meta.get("update_modes"),
+            "trait_distribution": meta.get("trait_families"),
+            "control": ["approximate_minus_exact", "synchronous_minus_sequential"]}
+    for name in ("trait", "dynamic"):
+        count = meta[f"{name}_replicates"]
+        if isinstance(count, bool) or not isinstance(count, int) or count < 1:
+            raise ValueError(f"{name}_replicates must be a positive integer")
+        axes[f"{name}_rep"] = list(range(1, count + 1))
+    return axes
+
+
+def _check_design(frame, keys, axes, filename):
+    expected = pd.DataFrame(itertools.product(*(axes[k] for k in keys)), columns=keys)
+    actual_keys, expected_keys = _key_set(frame, keys), _key_set(expected, keys)
+    if actual_keys != expected_keys or len(frame) != len(expected_keys):
+        raise ValueError(f"Incomplete or unexpected design keys in {filename}: "
+                         f"{len(expected_keys - actual_keys)} missing, "
+                         f"{len(actual_keys - expected_keys)} unexpected")
+
+
+def _check_values(frame, filename):
+    numeric = frame.select_dtypes(include="number")
+    if not np.isfinite(numeric.to_numpy(dtype=float)).all() or frame.isna().any().any():
+        raise ValueError(f"Missing or nonfinite values in {filename}")
+
+
+def _merge_supplemental(shard_dirs, metadata, specs, axes):
+    tables = {}
     for spec in specs:
         frames = []
         filename = spec["file"]
@@ -108,19 +152,18 @@ def _merge_supplemental(shard_dirs, metadata, specs, output: Path) -> dict[str, 
                 raise ValueError(f"Missing required shard file: {path}")
             frame = pd.read_csv(path)
             _check_columns(frame, spec["keys"], path)
+            _check_values(frame, path)
+            if frames and list(frame.columns) != list(frames[0].columns):
+                raise ValueError(f"Inconsistent columns in {filename}")
             frames.append(frame)
         merged = pd.concat(frames, ignore_index=True)
-        dup = merged.duplicated(spec["keys"], keep=False)
-        if dup.any():
-            examples = merged.loc[dup, spec["keys"]].head(5).to_dict("records")
-            raise ValueError(f"Duplicate keys found in {filename}, examples: {examples}")
-        expected = int(spec["rows"](first_meta))
-        if len(merged) != expected:
-            raise ValueError(f"Merged {len(merged)} rows in {filename}, expected {expected}")
-        merged = merged.sort_values(spec["keys"]).reset_index(drop=True)
-        merged.to_csv(output / filename, index=False)
-        counts[filename] = len(merged)
-    return counts
+        if merged.duplicated(spec["keys"], keep=False).any():
+            raise ValueError(f"Duplicate keys found in {filename}")
+        _check_design(merged, spec["keys"], axes, filename)
+        if len(merged) != int(spec["rows"](metadata[0])):
+            raise ValueError(f"Unexpected row count in {filename}")
+        tables[filename] = merged.sort_values(spec["keys"]).reset_index(drop=True)
+    return tables
 
 
 def merge_shards(root: Path, experiment: str, output: Path | None = None) -> dict:
@@ -173,6 +216,14 @@ def merge_shards(root: Path, experiment: str, output: Path | None = None) -> dic
         summ = pd.read_csv(summary_path)
         _check_columns(rep, cfg["replicate_keys"], rep_path)
         _check_columns(summ, cfg["condition_keys"], summary_path)
+        _check_values(rep, rep_path)
+        _check_values(summ, summary_path)
+        if replicate_frames and list(rep.columns) != list(replicate_frames[0].columns):
+            raise ValueError("Inconsistent replicate columns across shards")
+        if summary_frames and list(summ.columns) != list(summary_frames[0].columns):
+            raise ValueError("Inconsistent summary columns across shards")
+        if "shard_run_count" in meta and len(rep) != meta["shard_run_count"]:
+            raise ValueError(f"Incorrect shard run count in {directory}")
         replicate_frames.append(rep)
         summary_frames.append(summ)
 
@@ -209,18 +260,29 @@ def merge_shards(root: Path, experiment: str, output: Path | None = None) -> dic
             f"Merged {len(summaries)} condition-summary rows, expected {expected_summary_rows}"
         )
 
+    axes = _expected_design(metadata[0], cfg)
+    _check_design(reps, cfg["replicate_keys"], axes, cfg["replicate_file"])
+    _check_design(summaries, cfg["condition_keys"], axes, cfg["summary_file"])
+    # Detect stale summaries, not just their presence.
+    if "phi" in reps and "phi_mean" in summaries:
+        computed = reps.groupby(cfg["condition_keys"], as_index=False).agg(
+            computed_mean=("phi", "mean"), computed_n=("phi", "size"))
+        checked = summaries.merge(computed, on=cfg["condition_keys"], validate="one_to_one")
+        if not np.allclose(checked.phi_mean, checked.computed_mean, rtol=1e-10, atol=1e-12):
+            raise ValueError("Condition phi_mean does not reproduce from replicate rows")
+        if "n" in checked and not (checked.n == checked.computed_n).all():
+            raise ValueError("Condition n does not match replicate count")
+
     reps = reps.sort_values(cfg["replicate_keys"]).reset_index(drop=True)
     summaries = summaries.sort_values(cfg["condition_keys"]).reset_index(drop=True)
+    supplemental = _merge_supplemental(
+        shard_dirs, metadata, cfg.get("supplemental", []), axes)
+    supplemental_counts = {name: len(table) for name, table in supplemental.items()}
     output = Path(output) if output is not None else root / "merged"
-    output.mkdir(parents=True, exist_ok=True)
+    if output.exists():
+        raise ValueError(f"Output already exists; choose a fresh --output directory: {output}")
     rep_out = output / cfg["replicate_file"]
     summary_out = output / cfg["summary_file"]
-    reps.to_csv(rep_out, index=False)
-    summaries.to_csv(summary_out, index=False)
-
-    supplemental_counts = _merge_supplemental(
-        shard_dirs, metadata, cfg.get("supplemental", []), output
-    )
 
     report = {
         "experiment": experiment,
@@ -235,8 +297,22 @@ def merge_shards(root: Path, experiment: str, output: Path | None = None) -> dic
         "replicate_output": str(rep_out),
         "summary_output": str(summary_out),
     }
-    with (output / "merge_report.json").open("w", encoding="utf-8") as handle:
-        json.dump(report, handle, indent=2)
+    # Validate everything before publishing a complete directory. A bad supplemental
+    # table must never leave a plausible-looking partial merged dataset behind.
+    output.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=".merge-", dir=output.parent))
+    try:
+        tables = {cfg["replicate_file"]: reps, cfg["summary_file"]: summaries, **supplemental}
+        for name, table in tables.items():
+            table.to_csv(staging / name, index=False)
+        report["output_sha256"] = {
+            name: hashlib.sha256((staging / name).read_bytes()).hexdigest() for name in tables}
+        report["source_metadata"] = metadata
+        (staging / "merge_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+        staging.rename(output)
+    finally:
+        if staging.exists():
+            shutil.rmtree(staging)
     return report
 
 
