@@ -38,7 +38,7 @@ explicitly permitted.
 
 Before fitting any model, the data pipeline should verify:
 
-1. all required columns exist;
+1. the table is nonempty, all required columns exist, and identifiers are nonmissing and nonblank;
 2. timestamps are parseable and coordinates are finite;
 3. each `(group_id, bout_id, individual_id, timestamp)` key is unique;
 4. timestamps are strictly increasing within each individual track after sorting;
@@ -64,7 +64,12 @@ The primary evaluation unit should be a complete biological block, for example a
 day, recording session, or movement bout. The precise blocking level must be chosen before
 model comparison and should match the independence structure of the experiment. The helper
 `assign_grouped_folds` creates deterministic folds from complete blocks and verifies that a
-block never appears in more than one fold.
+block never appears in more than one fold. It balances the number of blocks, not frames,
+across folds after deterministic hash ordering. At least `n_folds` blocks are required,
+and every fold is populated. Assignments are invariant to row order but can change when
+the set of blocks changes. Save and reuse a frozen fold table for a fixed study dataset.
+This allocation replaces the earlier hash-modulo rule, so regenerate older folds only as
+an explicitly versioned analysis change.
 
 At minimum, report prediction performance for every held-out block and the distribution of
 performance across independent blocks. Model selection and hyperparameter tuning must use
@@ -102,3 +107,38 @@ A defensible empirical validation package should contain:
 - proximity-only, shuffled-network and alternative-movement-kernel baselines;
 - block-level prediction metrics and uncertainty;
 - a clear separation between predictive evidence and biological interpretation.
+
+## Scoring held-out predictions
+
+Supply one row per model and observation with the fields below plus any extra
+columns used to define a coarser biological block:
+
+| Fields | Requirement |
+|---|---|
+| `group_id`, `bout_id`, `individual_id`, `timestamp` | Same observation keys for every model |
+| `model` | Model name, such as M0, M1, M2, M3, proximity or shuffled |
+| `observed_heading`, `predicted_heading` | Finite angles in radians |
+
+The table contains seven columns in total. Coordinates are not required for scoring.
+Generate predictions with training-only parameters, preprocessing and social relationships.
+The scorer cannot infer whether the upstream fitting procedure leaked test information.
+
+```bash
+python src/prediction_evaluation.py /path/to/held_out_predictions.csv \
+  --output /path/to/block_scores.csv --block-columns group_id bout_id
+```
+
+For paired uncertainty, from Python with `src` on the import path:
+
+```python
+from prediction_evaluation import score_predictions, compare_models
+scores = score_predictions(predictions, block_columns=("group_id",))
+comparison = compare_models(scores, "M0", "M3", block_columns=("group_id",), seed=42)
+```
+
+The comparison averages the MAE difference equally across complete blocks and bootstraps
+paired blocks, preserving model pairing. Its interval requires reasonably independent
+blocks; choosing individual bouts does not make bouts from the same flock independent.
+Choose the blocking level from the study design, before inspecting model differences.
+At least two matched blocks are required, but very few blocks yield weak uncertainty
+estimates. These utilities supply evaluation infrastructure, not empirical validation.

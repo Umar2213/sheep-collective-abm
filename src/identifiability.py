@@ -46,7 +46,7 @@ def blended_heading(self_heading, neighbour_x, neighbour_y, responsiveness):
     x = (1.0 - r) * np.cos(self_heading) + r * neighbour_x
     y = (1.0 - r) * np.sin(self_heading) + r * neighbour_y
     out = np.arctan2(y, x)
-    zero = np.hypot(x, y) <= np.finfo(float).eps
+    zero = np.hypot(x, y) <= 10 * np.finfo(float).eps
     return np.where(zero, self_heading, out)
 
 
@@ -81,18 +81,30 @@ def fit_responsiveness(self_heading, neighbour_x, neighbour_y, observed_heading)
         err = circular_error(observed_heading, pred)
         return float(np.mean(err**2))
 
-    result = minimize_scalar(
-        objective,
-        bounds=(0.0, 1.0),
-        method="bounded",
-        options={"xatol": 1e-10},
-    )
-    if not result.success:
-        raise RuntimeError(f"responsiveness optimization failed: {result.message}")
+    # A bounded local optimizer assumes a unimodal objective. Circular residuals
+    # can violate that assumption, so profile the interval and refine each basin.
+    grid = np.linspace(0.0, 1.0, 1001)
+    loss = np.array([objective(r) for r in grid])
+    if np.ptp(loss) <= 1e-12:
+        raise ValueError("Responsiveness is not identifiable from these observations: flat loss")
+    candidates = [(float(loss[0]), 0.0), (float(loss[-1]), 1.0)]
+    for i in range(1, len(grid) - 1):
+        if loss[i] <= loss[i - 1] and loss[i] <= loss[i + 1]:
+            result = minimize_scalar(objective, bounds=(grid[i - 1], grid[i + 1]),
+                                     method="bounded", options={"xatol": 1e-10})
+            if not result.success:
+                raise RuntimeError(f"responsiveness optimization failed: {result.message}")
+            candidates.append((float(result.fun), float(result.x)))
+    value, estimate = min(candidates)
+    near_optimal = grid[loss <= value + 1e-8]
     return {
-        "responsiveness": float(result.x),
-        "mean_squared_circular_error": float(result.fun),
+        "responsiveness": estimate,
+        "mean_squared_circular_error": value,
         "n": int(len(self_heading)),
+        "boundary_optimum": estimate in (0.0, 1.0),
+        "profile_loss_range": float(np.ptp(loss)),
+        # A numerical ambiguity screen, not a confidence interval.
+        "ambiguous_profile": bool(len(near_optimal) > 1 and np.ptp(near_optimal) > 0.01),
     }
 
 
@@ -111,7 +123,13 @@ def weighted_neighbour_vector(headings, tie_weights, influence_weights):
         raise ValueError("finite values required")
     if np.any(ties < 0) or np.any(influence < 0):
         raise ValueError("weights must be nonnegative")
-    weights = ties * influence
+    # Log weights avoid overflow/underflow in finite A*q products.
+    positive = (ties > 0) & (influence > 0)
+    if not positive.any():
+        return np.array([0.0, 0.0])
+    log_weights = np.log(ties[positive]) + np.log(influence[positive])
+    weights = np.zeros_like(ties)
+    weights[positive] = np.exp(log_weights - log_weights.max())
     total = float(weights.sum())
     if total <= 0:
         return np.array([0.0, 0.0])
@@ -134,7 +152,8 @@ def equivalent_tie_influence_parameterization(tie_matrix, influence_weights, sca
     ties = np.asarray(tie_matrix, dtype=float)
     influence = np.asarray(influence_weights, dtype=float)
     scales = np.asarray(scales, dtype=float)
-    if ties.ndim != 2 or ties.shape[1] != len(influence) or len(influence) != len(scales):
+    if (ties.ndim != 2 or influence.ndim != 1 or scales.ndim != 1
+            or ties.shape[1] != influence.size or influence.size != scales.size):
         raise ValueError("tie matrix columns, influence weights and scales must agree")
     if not (
         np.isfinite(ties).all()
