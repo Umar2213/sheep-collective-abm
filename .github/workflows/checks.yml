@@ -23,6 +23,14 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
+      - name: End-to-end synthetic analysis and report
+        run: |
+          python src/generate_demo.py --output "$RUNNER_TEMP/analysis-demo"
+          python src/run_analysis.py "$RUNNER_TEMP/analysis-demo/trajectories.csv" --config "$RUNNER_TEMP/analysis-demo/config.json" --ties "$RUNNER_TEMP/analysis-demo/ties.csv" --output "$RUNNER_TEMP/analysis-output" --sensitivity-radii 5 10
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-analysis-check
+          path: ${{ runner.temp }}/analysis-output/
       - run: python src/audit_results.py
       - run: python src/analyze_production.py && python src/make_main_figure.py && python src/analyze_fss.py && python src/make_snapshots.py
 
