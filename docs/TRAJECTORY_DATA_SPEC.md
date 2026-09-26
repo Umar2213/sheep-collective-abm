@@ -119,7 +119,7 @@ columns used to define a coarser biological block:
 | `model` | Model name, such as M0, M1, M2, M3, proximity or shuffled |
 | `observed_heading`, `predicted_heading` | Finite angles in radians |
 
-The table contains seven columns in total. Coordinates are not required for scoring.
+The table contains seven required columns in total. Coordinates are not required for scoring.
 Generate predictions with training-only parameters, preprocessing and social relationships.
 The scorer cannot infer whether the upstream fitting procedure leaked test information.
 

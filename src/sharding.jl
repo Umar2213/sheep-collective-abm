@@ -27,3 +27,11 @@ function shard_dir(base, spec=shard_spec())
     tag = "shard_" * lpad(string(spec.index), 3, '0') * "_of_" * lpad(string(spec.count), 3, '0')
     return joinpath(base, tag)
 end
+
+"""Reserve an output directory exclusively; never overwrite a prior or partial run."""
+function reserve_output_dir(path)
+    ispath(path) && throw(ArgumentError("Output exists; choose a fresh ABM_OUTPUT_DIR: $path"))
+    mkpath(dirname(abspath(path)))
+    mkdir(path)
+    return path
+end

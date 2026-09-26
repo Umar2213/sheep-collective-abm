@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import replace
 import hashlib
+from importlib.metadata import version
 import json
 from pathlib import Path
 import platform
@@ -17,7 +18,8 @@ from trajectory_pipeline import AnalysisConfig, read_table, run_pipeline
 
 
 def digest(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    with Path(path).open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
 def write_json(path, obj):
@@ -72,7 +74,7 @@ def publish_result(result, output, *, inputs=None, sensitivity=None):
     output.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".analysis-", dir=output.parent))
     try:
-        for name in ("folds", "movement", "features", "predictions", "parameters", "scores", "comparisons"):
+        for name in ("prepared", "folds", "movement", "individual_bouts", "features", "predictions", "parameters", "scores", "comparisons"):
             result[name].to_csv(stage/f"{name}.csv", index=False)
         if sensitivity is not None:
             sensitivity.to_csv(stage/"sensitivity.csv", index=False)
@@ -106,7 +108,13 @@ def publish_result(result, output, *, inputs=None, sensitivity=None):
             sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=Path(__file__).parent, text=True, stderr=subprocess.DEVNULL).strip()
         except (OSError, subprocess.CalledProcessError):
             sha = None
-        manifest = {"schema_version": 1, "source_commit": sha,
+        try:
+            dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=Path(__file__).parent, text=True, stderr=subprocess.DEVNULL).strip())
+        except (OSError, subprocess.CalledProcessError):
+            dirty = None
+        manifest = {"schema_version": 1, "source_commit": sha, "source_dirty": dirty,
+                    "packages": {name: version(name) for name in ("numpy", "pandas", "scipy", "pyproj", "matplotlib")},
+                    "units": {"coordinates": "metres", "time": "seconds", "angles": "radians", "speed": "metres/second"},
                     "python": platform.python_version(), "numpy": np.__version__, "pandas": pd.__version__,
                     "inputs": inputs or {}, "source_sha256": {p.name: digest(p) for p in Path(__file__).parent.glob("*.py")},
                     "outputs_sha256": {p.name: digest(p) for p in sorted(stage.iterdir())}}
@@ -128,6 +136,8 @@ def main():
     args = parser.parse_args()
     if args.output.exists():
         parser.error("Output directory already exists")
+    input_paths = {name: path for name, path in (("trajectories", args.trajectories), ("config", args.config), ("ties", args.ties), ("folds", args.folds)) if path}
+    hashes = {name: digest(path) for name, path in input_paths.items()}
     options = json.loads(args.config.read_text())
     for key in ("split_columns", "uncertainty_columns", "shuffle_seeds"):
         if key in options:
@@ -146,7 +156,8 @@ def main():
             if not original.equals(current):
                 raise RuntimeError("Sensitivity scenarios lost matched observation coverage")
             sensitivity.append(trial["comparisons"].assign(radius=radius))
-    hashes = {name: digest(path) for name, path in (("trajectories", args.trajectories), ("config", args.config), ("ties", args.ties), ("folds", args.folds)) if path}
+    if hashes != {name: digest(path) for name, path in input_paths.items()}:
+        raise RuntimeError("Input changed during analysis; freeze inputs and rerun")
     publish_result(result, args.output, inputs=hashes, sensitivity=pd.concat(sensitivity, ignore_index=True) if sensitivity else None)
     print(f"Analysis complete: {args.output}")
 

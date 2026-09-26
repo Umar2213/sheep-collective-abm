@@ -2,11 +2,15 @@
 
 ## Scope
 
-This repository develops an exploratory sheep-inspired collective-motion framework focused
-on how persistent individual differences and relationship structure can shape group
-movement. The current implementation is computational rather than empirically calibrated.
-Its purpose is to build a reproducible mechanistic foundation that can later be tested on
-measured sheep trajectories.
+The primary PhD scope is the empirical sheep component feeding the mathematical modelling
+of ARC Discovery Project DP260101231. Build a reproducible empirical pipeline and deliver
+validated data, biological measurements, statistical estimates, social-network information
+and model-validation evidence. The agent-based model supports this scope.
+
+The operational plan is [WP0 to WP7](EMPIRICAL_ROADMAP.md). Begin with data governance and
+the study inventory, raw trajectory audit, preprocessing and defensible behavioural units.
+Simulation sweeps are supporting work and must not displace empirical study preparation.
+No empirical sheep findings are currently established by this repository.
 
 The project deliberately separates three quantities that are easy to conflate:
 
@@ -69,7 +73,8 @@ These hypotheses may be rejected. No result is assumed in advance.
 
 ## Computational work before animal data
 
-The immediate priority is the validation protocol in `EXPERIMENT_PROTOCOL.md`.
+For supporting simulation claims, follow `EXPERIMENT_PROTOCOL.md`. These experiments
+are not prerequisites for starting empirical WP0 to WP3.
 
 1. Verify the corrected exact-radius implementation with automated tests and smoke runs.
 2. Use independent random streams for traits, initial state and dynamical noise.
@@ -105,8 +110,9 @@ The aim is to separate an effect of heterogeneity from an effect of a particular
 
 Minimum movement data should include:
 
-`group_id`, `animal_id`, timestamp, projected `x` and `y` coordinates in metres,
-position-quality information, and the observation interval.
+`group_id`, `bout_id`, `individual_id`, `timestamp`, projected `x` and `y` in metres.
+Use stable anonymized IDs. Record quality information and the observation interval when
+available; do not invent missing sensor metadata.
 
 Useful accompanying data include repeated behavioural measurements, group composition,
 movement state, environmental conditions, body or physiological measurements relevant to
@@ -172,7 +178,7 @@ If recovery fails, reduce model complexity before biological interpretation.
 
 ## Decision gates
 
-**Software gate:** Julia tests and all three smoke experiments pass in the pinned
+**Software gate:** Julia tests and all four smoke experiments pass in the pinned
 environment.
 
 **Simulation gate:** corrected exact-radius results are reproducible, per-run convergence is
@@ -185,8 +191,9 @@ distribution tail or uncontrolled realized sample means.
 **Identifiability gate:** synthetic parameter recovery establishes which latent quantities
 can be estimated reliably.
 
-**Empirical gate:** held-out sheep trajectories show predictive improvement over simpler
-baselines with uncertainty assessed at independent biological units.
+**Empirical gate:** evaluate held-out sheep trajectories against simpler baselines with
+uncertainty assessed at independent biological units. No improvement, weak individual
+differences and unidentifiable parameters are valid outcomes, not failed research.
 
 **Novelty gate:** a focused literature review shows that the final combination of mechanism,
 identifiability analysis and empirical predictive test makes a specific contribution beyond
