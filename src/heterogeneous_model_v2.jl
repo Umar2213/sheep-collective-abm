@@ -106,19 +106,22 @@ function deterministic_heading(agent::SheepAgent, model)
     neighbours = collect(nearby_agents(agent, model, model.radius; search=model.neighbor_search))
     isempty(neighbours) && return agent.θ
 
-    sin_sum = 0.0
-    cos_sum = 0.0
-    weight_sum = 0.0
+    # Scale positive products in log space to avoid overflow or underflow.
+    log_weights = Float64[]
+    active = SheepAgent[]
     for nb in neighbours
         tie = model.social_ties === nothing ? 1.0 : model.social_ties[agent.id, nb.id]
-        w = tie * nb.influence_weight
-        if w > 0
-            sin_sum += w * sin(nb.θ)
-            cos_sum += w * cos(nb.θ)
-            weight_sum += w
+        if tie > 0 && nb.influence_weight > 0
+            push!(active, nb)
+            push!(log_weights, log(tie) + log(nb.influence_weight))
         end
     end
-    weight_sum > 0 || return agent.θ
+    isempty(active) && return agent.θ
+    shift = maximum(log_weights)
+    weights = exp.(log_weights .- shift)
+    weight_sum = sum(weights)
+    sin_sum = sum(w * sin(nb.θ) for (w, nb) in zip(weights, active))
+    cos_sum = sum(w * cos(nb.θ) for (w, nb) in zip(weights, active))
 
     nb_sin = sin_sum / weight_sum
     nb_cos = cos_sum / weight_sum

@@ -25,6 +25,8 @@ const SHARD = shard_spec()
 const BASE_OUTDIR = get(ENV, "ABM_OUTPUT_DIR",
     joinpath(@__DIR__, "..", "results", SMOKE ? "smoke_distribution_controls" : "distribution_controls"))
 const OUTDIR = shard_dir(BASE_OUTDIR, SHARD)
+# Reserve a fresh destination before expensive computation. Partial runs remain visible.
+reserve_output_dir(OUTDIR)
 
 trait_seed(rep) = 310_000 + rep
 init_seed(rep) = 320_000 + rep
@@ -88,7 +90,6 @@ Threads.@threads :dynamic for i in eachindex(jobs)
     (d % 25 == 0 || d == length(jobs)) && println("  $d / $(length(jobs))")
 end
 
-mkpath(OUTDIR)
 raw = DataFrame(res)
 CSV.write(joinpath(OUTDIR, "distribution_replicates.csv"), raw)
 write_run_metadata(OUTDIR;

@@ -104,7 +104,9 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--block-columns", nargs="+", default=["group_id", "bout_id"])
     args = parser.parse_args()
-    scores = score_predictions(pd.read_csv(args.predictions), block_columns=args.block_columns)
+    if args.output.exists():
+        parser.error("Output already exists; choose a fresh file")
+    scores = score_predictions(pd.read_csv(args.predictions, dtype=str, keep_default_na=False), block_columns=args.block_columns)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     scores.to_csv(args.output, index=False)
 

@@ -28,6 +28,8 @@ const BASE_OUTDIR = get(ENV, "ABM_OUTPUT_DIR",
     joinpath(@__DIR__, "..", "results", SMOKE ? "smoke_fss" :
              string(NEIGHBOR_SEARCH, "_", UPDATE_MODE, "_fss")))
 const OUTDIR = shard_dir(BASE_OUTDIR, SHARD)
+# Reserve a fresh destination before expensive computation. Partial runs remain visible.
+reserve_output_dir(OUTDIR)
 
 Lfor(N) = sqrt(N / RHO)
 trait_seed(rep) = 110_000 + rep
@@ -82,7 +84,6 @@ jobs = [(n, s, tr, dr) for (n, s) in conditions
         for tr in 1:N_TRAIT_REPS for dr in 1:N_DYNAMIC_REPS]
 res = Vector{Any}(undef, length(jobs))
 
-mkpath(OUTDIR)
 const T0 = time()
 println("FSS: $(length(jobs)) runs × $N_TOTAL steps, N ∈ $(N_LIST)")
 println("search=$NEIGHBOR_SEARCH, update=$UPDATE_MODE, density=$RHO")

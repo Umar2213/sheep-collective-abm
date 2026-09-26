@@ -27,6 +27,7 @@ jobs:
         run: |
           python src/generate_demo.py --output "$RUNNER_TEMP/analysis-demo"
           python src/run_analysis.py "$RUNNER_TEMP/analysis-demo/trajectories.csv" --config "$RUNNER_TEMP/analysis-demo/config.json" --ties "$RUNNER_TEMP/analysis-demo/ties.csv" --output "$RUNNER_TEMP/analysis-output" --sensitivity-radii 5 10
+      - run: python src/verify_analysis.py "$RUNNER_TEMP/analysis-output"
       - uses: actions/upload-artifact@v4
         with:
           name: synthetic-analysis-check

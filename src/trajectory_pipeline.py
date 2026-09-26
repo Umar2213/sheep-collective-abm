@@ -7,7 +7,6 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict
 import hashlib
 import json
-import re
 
 import numpy as np
 import pandas as pd
@@ -39,16 +38,19 @@ class AnalysisConfig:
     ties_independent: bool = False
 
     def validate(self):
+        if not isinstance(self.ties_independent, bool):
+            raise ValueError("ties_independent must be a JSON boolean, not a string or number")
         if self.data_kind not in ("synthetic", "observational", "unspecified"):
             raise ValueError("data_kind must be synthetic, observational or unspecified")
         if self.coordinate_mode not in ("metric", "gps"):
             raise ValueError("coordinate_mode must be metric or gps")
         for name in ("max_speed", "max_gap", "max_accuracy", "radius"):
             v = getattr(self, name)
-            if not np.isfinite(v) or v <= 0:
+            if isinstance(v, bool) or not isinstance(v, (int, float)) or not np.isfinite(v) or v <= 0:
                 raise ValueError(f"{name} must be finite and positive")
         for name in ("min_speed", "displacement_sigma"):
-            if not np.isfinite(getattr(self, name)) or getattr(self, name) < 0:
+            v = getattr(self, name)
+            if isinstance(v, bool) or not isinstance(v, (int, float)) or not np.isfinite(v) or v < 0:
                 raise ValueError(f"{name} must be finite and nonnegative")
         if self.min_speed >= self.max_speed:
             raise ValueError("min_speed must be below max_speed")
@@ -119,6 +121,9 @@ def prepare_trajectories(frame, config):
         if col in data:
             data[col] = data[col].map(lambda v: v.strip() if isinstance(v, str) else v)
     data, audit = validate_trajectory_table(data)
+    # The same fix cannot belong to different held-out bouts.
+    if data.duplicated(["group_id", "individual_id", "timestamp"]).any():
+        raise ValueError("Overlapping bouts reuse an individual timestamp; resolve session boundaries before splitting")
     accuracy_present = "accuracy_m" in data
     if accuracy_present:
         acc = pd.to_numeric(data.accuracy_m, errors="coerce")
@@ -153,6 +158,22 @@ def prepare_trajectories(frame, config):
     return data, {"structural": audit.to_dict(), "filters": flags, "warnings": warnings}
 
 
+def individual_bout_summary(data):
+    """Descriptive track summaries, not independent-frame inference or repeatability."""
+    rows = []
+    for keys, track in data.groupby(list(KEY_COLUMNS[:3]), sort=True):
+        valid = track[track.interval_usable]
+        duration = float(valid.dt.sum())
+        distance = float(valid.distance.sum())
+        rows.append(dict(zip(KEY_COLUMNS[:3], keys),
+                         observations=len(track), usable_intervals=len(valid),
+                         usable_headings=int(track.heading.notna().sum()),
+                         observed_span_s=float((track.timestamp.max()-track.timestamp.min()).total_seconds()),
+                         usable_duration_s=duration, path_length_m=distance,
+                         time_weighted_speed_m_s=distance/duration if duration else np.nan))
+    return pd.DataFrame(rows)
+
+
 def movement_summary(data):
     rows = []
     for keys, frame in data.groupby(["group_id", "bout_id", "timestamp"], sort=True):
@@ -170,7 +191,7 @@ def movement_summary(data):
 def validate_ties(ties, data, config):
     if ties is None:
         return None
-    if not config.ties_independent:
+    if config.ties_independent is not True:
         raise ValueError("Social ties must be declared independent of all analysed sessions")
     cols = ["group_id", "focal_id", "neighbour_id", "weight"]
     if not set(cols) <= set(ties) or ties.empty:
@@ -337,7 +358,8 @@ def evaluate(predictions, config):
     models = sorted(scores.model.unique())
     pairs = [("M0", "M1"), ("persistence", "M0"), ("constant_turn", "M0"), ("distance", "M0")]
     if "M3" in models:
-        pairs += [(ref, "M3") for ref in ("M1", "M2", "persistence", "constant_turn", "distance")]
+        pairs += [("M0", "M2"), ("distance", "M2")]
+        pairs += [(ref, "M3") for ref in ("M0", "M1", "M2", "persistence", "constant_turn", "distance")]
         pairs += [(m, "M3") for m in models if m.startswith("shuffle_")]
     n_units = scores[list(config.uncertainty_columns)].drop_duplicates().shape[0]
     comparisons = []
@@ -376,6 +398,6 @@ def run_pipeline(frame, config, ties=None, folds=None):
     if audit["uncertainty_units"] < 5:
         audit["warnings"].append("Fewer than five uncertainty units: interpret uncertainty as exploratory.")
     return dict(prepared=prepared, audit=audit, features=features, folds=frozen,
-                movement=movement_summary(prepared), predictions=predictions,
+                movement=movement_summary(prepared), individual_bouts=individual_bout_summary(prepared), predictions=predictions,
                 parameters=parameters, scores=scores, comparisons=comparisons,
                 config=asdict(config))

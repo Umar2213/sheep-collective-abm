@@ -166,3 +166,21 @@ frozen folds, matched models, controls and uncertainty. State that the generator
 same model family: favourable synthetic results are expected software checks, not newly
 discovered animal behaviour. Actual measured data, design justification, external validation
 and full corrected simulation experiments are still required for empirical claims.
+
+## Empirical handoff and integrity checks
+
+See [the empirical roadmap](EMPIRICAL_ROADMAP.md) for WP0 to WP7 and research that is
+not yet implemented. `prepared.csv` retains every parsed/projected row with quality flags;
+`individual_bouts.csv` supplies descriptive per-track usable duration, path length and
+duration-weighted speed. These summaries do not estimate repeatability. All empirical
+exports are private until approved for release, including the browser bundle.
+
+Overlapping bouts that reuse an individual timestamp within a group are rejected before
+splitting. This does not establish independence between nonoverlapping bouts. Social
+independence must be a JSON boolean, never a string such as `"false"`. M2 versus M0 and
+distance, and M3 versus M0, are now included alongside the conditional contrasts.
+
+`manifest.json` records package versions, units and whether the Git worktree was dirty.
+Use `python src/verify_analysis.py OUTPUT` to verify all output hashes and file coverage.
+The separate `src/audit_trajectories.py INPUT --output AUDIT.json` command performs a
+structural audit before model fitting, retaining diagnostics for invalid metric-schema data.
