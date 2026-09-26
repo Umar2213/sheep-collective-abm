@@ -5,3 +5,24 @@ __pycache__/
 .ipynb_checkpoints/
 *.pyc
 results/smoke_*/
+
+# Local credentials and environment files
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+
+# Restricted or large empirical data
+data/raw/
+data/external/
+data/interim/
+data/processed/
+data/metadata/private/
+
+# Local server scratch and scheduler output
+scratch/
+tmp/
+slurm-*.out
