@@ -25,15 +25,18 @@ show that it can be separated from dyadic relationship weights.
 
 ## Research question
 
-**Can individual responsiveness, partner-specific social relationships and outgoing
-influence be separated mechanistically and statistically, and does that separation improve
-out-of-sample prediction of sheep movement beyond simpler collective-motion models?**
+**Are individual movement differences repeatable, are social relationships stable, and
+do individual responsiveness and independently characterized dyadic relationships provide
+non-redundant prediction of sheep movement beyond common response and spatial proximity?**
+
+Outgoing influence is an optional modelling extension only after separate identifiability
+is established. It is not a primary empirical PhD objective.
 
 This is a candidate research contribution, not a novelty claim. `NOVELTY_MATRIX.md`
 records representative prior work and the evidence needed before a novelty statement is
 made.
 
-## Nested model hierarchy
+## Model comparison hierarchy
 
 All models should use the same movement kernel, boundary treatment, observation model,
 training/test split and scoring rules.
@@ -48,6 +51,9 @@ training/test split and scoring rules.
 
 M0 to M3 are the primary hierarchy. M4 is conditional on parameter recovery and should be
 dropped if `q_j` and `A_ij` cannot be separately identified.
+With externally fixed nonuniform ties, M0 and M2 are not generally nested statistical
+models. Use the specified matched held-out comparisons, not a likelihood-ratio test that
+assumes every pair in the hierarchy is nested.
 
 ## Testable hypotheses
 

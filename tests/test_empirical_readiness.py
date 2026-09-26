@@ -10,7 +10,9 @@ from unittest.mock import patch
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from trajectory_pipeline import AnalysisConfig, prepare_trajectories, individual_bout_summary
+from trajectory_pipeline import AnalysisConfig, prepare_trajectories, individual_bout_summary, read_table, validate_ties
+from trajectory_validation import audit_trajectory_table, validate_trajectory_table
+from prediction_evaluation import score_predictions
 from audit_trajectories import audit_file
 from verify_analysis import verify_analysis
 from run_analysis import digest
@@ -36,6 +38,58 @@ class ReadinessTests(unittest.TestCase):
         data = pd.concat([data, data.assign(bout_id='another')])
         with self.assertRaisesRegex(ValueError, 'Overlapping bouts'):
             prepare_trajectories(data, AnalysisConfig())
+
+    def test_naive_time_cannot_pass_standalone_audit_or_scoring(self):
+        data = self.track()
+        data['timestamp'] = data.timestamp.str.removesuffix('Z')
+        self.assertEqual(audit_trajectory_table(data).timezone_missing_timestamps, len(data))
+        with self.assertRaisesRegex(ValueError, 'timezone'):
+            validate_trajectory_table(data)
+        predictions = data.assign(model='M0', observed_heading=0., predicted_heading=0.)
+        with self.assertRaisesRegex(ValueError, 'timezone'):
+            score_predictions(predictions)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'naive.csv'
+            data.to_csv(path, index=False)
+            self.assertFalse(audit_file(path)['valid_structure'])
+
+    def test_explicit_offsets_preserve_instants_and_numeric_epochs_are_rejected(self):
+        data = self.track()
+        data['timestamp'] = data.timestamp.str.replace('T00:', 'T08:', regex=False).str.replace('Z', '+08:00', regex=False)
+        clean, _ = validate_trajectory_table(data)
+        expected, _ = validate_trajectory_table(self.track())
+        pd.testing.assert_series_equal(clean.timestamp, expected.timestamp)
+        with self.assertRaisesRegex(ValueError, 'timezone'):
+            validate_trajectory_table(self.track().assign(timestamp=1234567890))
+
+    def test_identifiers_are_not_silently_trimmed(self):
+        data = self.track()
+        data.loc[0, 'individual_id'] = ' 0'
+        with self.assertRaisesRegex(ValueError, 'whitespace'):
+            prepare_trajectories(data, AnalysisConfig())
+        ties = pd.DataFrame([dict(group_id='g', focal_id=' 0', neighbour_id='1', weight=1)])
+        with self.assertRaisesRegex(ValueError, 'whitespace'):
+            validate_ties(ties, self.track(), AnalysisConfig(ties_independent=True))
+
+    def test_unknown_accuracy_is_not_exported_as_perfect_accuracy(self):
+        prepared, audit = prepare_trajectories(self.track(), AnalysisConfig())
+        self.assertTrue(prepared.accuracy_m.isna().all())
+        self.assertFalse(audit['filters']['accuracy_supplied'])
+        self.assertEqual(int(prepared.interval_usable.sum()), 4)
+        measured, audit = prepare_trajectories(self.track().assign(accuracy_m=0.), AnalysisConfig())
+        self.assertTrue(measured.accuracy_m.eq(0).all())
+        self.assertTrue(audit['filters']['accuracy_supplied'])
+
+    def test_duplicate_csv_headers_cannot_be_silently_renamed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'bad.csv'
+            for header in ('x,x', 'x,', ''):
+                path.write_text(header+'\n1,2\n')
+                with self.subTest(header=header), self.assertRaisesRegex(ValueError, 'column names'):
+                    read_table(path)
+                report = audit_file(path)
+                self.assertFalse(report['valid_structure'])
+                self.assertIn('column names', report['error'])
 
     def test_individual_summary_uses_duration_and_excludes_bad_intervals(self):
         data, _ = prepare_trajectories(self.track(), AnalysisConfig(max_gap=1.5))

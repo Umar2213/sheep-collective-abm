@@ -5,6 +5,7 @@ All preprocessing settings are supplied in advance; nothing is tuned on test sco
 """
 from __future__ import annotations
 from dataclasses import dataclass, asdict
+import csv
 import hashlib
 import json
 
@@ -78,6 +79,10 @@ class AnalysisConfig:
 
 def read_table(path):
     """Preserve literal identifiers, including leading zeros and the string NA."""
+    with open(path, newline="", encoding="utf-8-sig") as stream:
+        header = next(csv.reader(stream), [])
+    if not header or any(not name.strip() for name in header) or len(set(header)) != len(header):
+        raise ValueError("CSV requires nonempty, unique column names")
     return pd.read_csv(path, dtype=str, keep_default_na=False)
 
 
@@ -112,14 +117,11 @@ def _project(frame, config):
 def prepare_trajectories(frame, config):
     config.validate()
     data = _project(frame, config)
-    # Do not guess a timezone, even though the legacy audit can coerce naive times.
+    # Require the documented timestamp representation at the pipeline boundary.
     if "timestamp" not in data or not data.timestamp.astype(str).str.match(
         r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
     ).all():
         raise ValueError("Timestamps require ISO 8601 with explicit timezone")
-    for col in KEY_COLUMNS[:3]:
-        if col in data:
-            data[col] = data[col].map(lambda v: v.strip() if isinstance(v, str) else v)
     data, audit = validate_trajectory_table(data)
     # The same fix cannot belong to different held-out bouts.
     if data.duplicated(["group_id", "individual_id", "timestamp"]).any():
@@ -131,8 +133,8 @@ def prepare_trajectories(frame, config):
             raise ValueError("accuracy_m must contain finite nonnegative values in every row")
         data["accuracy_m"] = acc
     else:
-        data["accuracy_m"] = 0.0
-    data["fix_usable"] = data.accuracy_m <= config.max_accuracy
+        data["accuracy_m"] = np.nan
+    data["fix_usable"] = data.accuracy_m <= config.max_accuracy if accuracy_present else True
     group = data.groupby(list(KEY_COLUMNS[:3]), sort=False)
     data["previous_time"] = group.timestamp.shift()
     data["dt"] = (data.timestamp - data.previous_time).dt.total_seconds()
@@ -142,7 +144,7 @@ def prepare_trajectories(frame, config):
     data["speed"] = data.distance / data.dt
     good = (data.dt > 0) & (data.dt <= config.max_gap) & data.fix_usable & group.fix_usable.shift().eq(True) & (data.speed <= config.max_speed)
     data["interval_usable"] = good
-    floor = config.displacement_sigma * np.hypot(data.accuracy_m, group.accuracy_m.shift())
+    floor = config.displacement_sigma * np.hypot(data.accuracy_m, group.accuracy_m.shift()) if accuracy_present else 0.0
     heading_good = good & (data.speed > config.min_speed) & (data.distance > floor)
     data["heading"] = np.where(heading_good, np.arctan2(dy, dx), np.nan)
     data["speed"] = data.speed.where(good)
@@ -200,7 +202,9 @@ def validate_ties(ties, data, config):
     for col in cols[:3]:
         if t[col].isna().any() or t[col].astype(str).str.strip().eq("").any():
             raise ValueError("Social tie identifiers must be complete")
-        t[col] = t[col].astype(str).str.strip()
+        if t[col].astype(str).ne(t[col].astype(str).str.strip()).any():
+            raise ValueError("Social tie identifiers have surrounding whitespace; correct in a documented adapter")
+        t[col] = t[col].astype(str)
     t.weight = pd.to_numeric(t.weight, errors="coerce")
     if not np.isfinite(t.weight).all() or (t.weight < 0).any() or t.duplicated(cols[:3]).any():
         raise ValueError("Social weights must be finite, nonnegative and unique")

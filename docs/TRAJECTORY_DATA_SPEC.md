@@ -18,7 +18,7 @@ restricted information to the public repository.
 | `group_id` | Stable identifier for the social group or flock |
 | `bout_id` | Stable identifier for one continuous movement bout or observation session |
 | `individual_id` | Anonymized animal identifier, stable within the study |
-| `timestamp` | Observation time, preferably ISO-8601 with timezone information |
+| `timestamp` | Observation time with an explicit timezone; the integrated pipeline requires ISO-8601 such as `2026-01-01T08:00:00+08:00` |
 | `x` | Planar x coordinate in a documented metric coordinate system |
 | `y` | Planar y coordinate in the same coordinate system as `x` |
 
@@ -39,7 +39,7 @@ explicitly permitted.
 Before fitting any model, the data pipeline should verify:
 
 1. the table is nonempty, all required columns exist, and identifiers are nonmissing and nonblank;
-2. timestamps are parseable and coordinates are finite;
+2. timestamps are parseable with explicit timezones and coordinates are finite;
 3. each `(group_id, bout_id, individual_id, timestamp)` key is unique;
 4. timestamps are strictly increasing within each individual track after sorting;
 5. each analysed bout contains at least two individuals;
@@ -54,6 +54,12 @@ Before fitting any model, the data pipeline should verify:
 The repository utility `src/trajectory_validation.py` performs the structural checks that
 can be evaluated from a tabular trajectory file. It does not silently interpolate or
 repair tracks.
+
+Numeric epochs require a documented adapter specifying their units and timezone before
+validation. Naive timestamps are rejected rather than assumed to be UTC. The audit counts
+these separately from unparseable timestamps. Identifiers with surrounding whitespace are
+rejected rather than silently trimmed, because trimming can merge animals or study blocks.
+The integrated CSV reader rejects duplicate or blank column names.
 
 ## Train/test splitting
 
@@ -103,7 +109,7 @@ A defensible empirical validation package should contain:
 - a reproducible preprocessing script;
 - a trajectory integrity report;
 - predefined grouped train/test folds;
-- nested M0 to M3 model comparisons, with M4 only if identifiable;
+- matched M0 to M3 model comparisons, with M4 only if identifiable;
 - proximity-only, shuffled-network and alternative-movement-kernel baselines;
 - block-level prediction metrics and uncertainty;
 - a clear separation between predictive evidence and biological interpretation.

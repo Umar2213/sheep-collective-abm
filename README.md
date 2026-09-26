@@ -19,6 +19,8 @@ Start with the [WP0 to WP7 empirical roadmap](docs/EMPIRICAL_ROADMAP.md),
 blocked prediction and handoff verification are implemented. Validated behavioural states,
 repeatability inference, training-only network estimation and empirical parameter recovery
 still require study-specific work. See the roadmap for explicit gates.
+See the [2026-09-26 final starting-readiness review](docs/FINAL_READINESS_REVIEW.md)
+for the latest input-integrity fixes, verification evidence and remaining empirical work.
 
 See the [model specification](docs/MODEL.md), [simulation validation protocol](docs/EXPERIMENT_PROTOCOL.md),
 [research plan](docs/RESEARCH_PLAN.md), [novelty matrix](docs/NOVELTY_MATRIX.md), and

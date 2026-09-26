@@ -38,6 +38,8 @@ class TrajectoryAudit:
     duplicate_keys: int
     nonfinite_coordinates: int
     unparseable_timestamps: int
+    timezone_missing_timestamps: int
+    whitespace_identifiers: int
     single_individual_bouts: int
     nonpositive_time_steps: int
     median_sampling_interval_seconds: float | None
@@ -61,6 +63,25 @@ def _missing_ids(frame, columns):
     return frame[list(columns)].isna().any(axis=1) | frame[list(columns)].apply(
         lambda col: col.map(lambda value: isinstance(value, str) and not value.strip())
     ).any(axis=1)
+
+
+def _whitespace_ids(frame, columns):
+    return frame[list(columns)].apply(
+        lambda col: col.map(lambda value: isinstance(value, str) and value != value.strip())
+    ).any(axis=1)
+
+
+def _timezone_missing(values):
+    """Flag parseable naive times and numeric epochs with unspecified units."""
+    def missing(value):
+        if isinstance(value, (int, float, np.number)):
+            return True
+        try:
+            parsed = pd.Timestamp(value)
+            return not pd.isna(parsed) and parsed.tzinfo is None
+        except (ValueError, TypeError, OverflowError):
+            return False  # Unparseable values are reported separately.
+    return values.map(missing)
 
 
 def _parsed_copy(frame: pd.DataFrame) -> pd.DataFrame:
@@ -122,6 +143,8 @@ def audit_trajectory_table(frame: pd.DataFrame) -> TrajectoryAudit:
         duplicate_keys=duplicate_keys,
         nonfinite_coordinates=nonfinite_coordinates,
         unparseable_timestamps=unparseable_timestamps,
+        timezone_missing_timestamps=int(_timezone_missing(frame["timestamp"]).sum()),
+        whitespace_identifiers=int(_whitespace_ids(frame, KEY_COLUMNS[:3]).sum()),
         single_individual_bouts=single_individual_bouts,
         nonpositive_time_steps=nonpositive_time_steps,
         median_sampling_interval_seconds=median_dt,
@@ -139,7 +162,7 @@ def validate_trajectory_table(frame: pd.DataFrame) -> tuple[pd.DataFrame, Trajec
     No interpolation, smoothing, imputation or resampling is performed.
     """
     data = _parsed_copy(frame)
-    audit = audit_trajectory_table(data)
+    audit = audit_trajectory_table(frame)
     failures = []
     if not len(data):
         failures.append("empty trajectory table")
@@ -147,6 +170,10 @@ def validate_trajectory_table(frame: pd.DataFrame) -> tuple[pd.DataFrame, Trajec
         failures.append(f"{audit.missing_identifiers} rows with missing identifiers")
     if audit.unparseable_timestamps:
         failures.append(f"{audit.unparseable_timestamps} unparseable timestamps")
+    if audit.timezone_missing_timestamps:
+        failures.append(f"{audit.timezone_missing_timestamps} timestamps require an explicit timezone and nonnumeric format")
+    if audit.whitespace_identifiers:
+        failures.append(f"{audit.whitespace_identifiers} identifiers have surrounding whitespace; correct in a documented adapter")
     if audit.nonfinite_coordinates:
         failures.append(f"{audit.nonfinite_coordinates} rows with nonfinite coordinates")
     if audit.duplicate_keys:
