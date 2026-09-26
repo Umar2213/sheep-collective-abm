@@ -2,7 +2,8 @@
 
 ## Purpose and scope
 
-This repository is an exploratory collective-motion model motivated by sheep flocking.
+This document specifies the supporting exploratory collective-motion model. The primary
+empirical PhD workflow is defined in `EMPIRICAL_ROADMAP.md`.
 It is not yet calibrated to measured sheep trajectories. The software is structured to
 separate mechanisms that are often conflated: focal responsiveness, outgoing influence,
 dyadic social relationships, metric interaction range, and update convention.

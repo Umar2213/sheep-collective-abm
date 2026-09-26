@@ -27,6 +27,8 @@ const BASE_OUTDIR = get(ENV, "ABM_OUTPUT_DIR",
     joinpath(@__DIR__, "..", "results", SMOKE ? "smoke_production" :
              string(NEIGHBOR_SEARCH, "_", UPDATE_MODE, "_production")))
 const OUTDIR = shard_dir(BASE_OUTDIR, SHARD)
+# Reserve a fresh destination before expensive computation. Partial runs remain visible.
+reserve_output_dir(OUTDIR)
 
 trait_seed(rep) = 10_000 + rep
 init_seed(rep) = 20_000 + rep
@@ -87,7 +89,6 @@ Threads.@threads :dynamic for i in eachindex(jobs)
     (d % 100 == 0 || d == length(jobs)) && println("  $d / $(length(jobs))")
 end
 
-mkpath(OUTDIR)
 raw = DataFrame(res)
 write_run_metadata(OUTDIR;
     experiment="production",

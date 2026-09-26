@@ -116,7 +116,7 @@ A result can move forward to interpretation only if:
 
 ## Empirical-validation gate
 
-A later sheep-data study should evaluate nested models M0 to M4 defined in
+A later sheep-data study should evaluate primary nested models M0 to M3, with M4 conditional on identifiability, defined in
 `NOVELTY_MATRIX.md`. Train/test division should occur at the level of complete days,
 groups or movement bouts. Social ties used for prediction should be estimated from
 independent or pre-training data. Parameter recovery on simulated data is required before
@@ -133,6 +133,7 @@ julia --project=. tests/trait_distributions.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/production_sweep.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/fss_sweep.jl
 ABM_SMOKE=1 julia --project=. --threads=2 src/control_sweep.jl
+ABM_SMOKE=1 julia --project=. --threads=2 src/distribution_control.jl
 ```
 
 Full experiments:

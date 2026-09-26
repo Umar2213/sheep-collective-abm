@@ -5,3 +5,18 @@ __pycache__/
 .ipynb_checkpoints/
 *.pyc
 results/smoke_*/
+
+# Local environments and private empirical material belong outside the checkout.
+.venv/
+.env
+.env.*
+!.env.example
+data/
+raw/
+interim/
+processed/
+private/
+local/
+outputs/
+results/empirical*/
+configs/*.local.*

@@ -176,3 +176,24 @@ end
         old_index === nothing ? pop!(ENV, "ABM_SHARD_INDEX", nothing) : (ENV["ABM_SHARD_INDEX"] = old_index)
     end
 end
+
+@testset "Extreme finite social products remain scale invariant" begin
+    for scale in (1e200, 1e-200)
+        a, _ = create_sheep_model(N=3, radius=10.0, social_ties=ones(3,3), influence_weights=ones(3))
+        b, _ = create_sheep_model(N=3, radius=10.0, social_ties=fill(scale,3,3), influence_weights=fill(scale,3))
+        for m in (a, b), i in 1:3
+            move_agent!(m[i], (Float64(i), 1.0), m)
+            m[i].θ = (i-1)*0.8
+        end
+        @test deterministic_heading(a[1], a) ≈ deterministic_heading(b[1], b)
+    end
+end
+
+@testset "Simulation output reservation" begin
+    mktempdir() do root
+        dest = joinpath(root, "campaign", "shard")
+        reserve_output_dir(dest)
+        @test isdir(dest)
+        @test_throws ArgumentError reserve_output_dir(dest)
+    end
+end

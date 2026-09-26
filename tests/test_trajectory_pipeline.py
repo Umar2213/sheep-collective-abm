@@ -32,6 +32,8 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(counts.nunique(), 1)
         self.assertTrue((r["predictions"].timestamp > r["predictions"].predictor_timestamp).all())
         self.assertTrue((r["comparisons"].n_blocks == 2).all())
+        pairs = set(zip(r["comparisons"].reference, r["comparisons"].alternative))
+        self.assertTrue({("M0", "M2"), ("distance", "M2"), ("M0", "M3"), ("M1", "M3"), ("M2", "M3")} <= pairs)
 
     def test_known_speed_and_alignment(self):
         rows = []
