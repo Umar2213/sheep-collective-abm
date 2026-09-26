@@ -22,6 +22,7 @@ or somebody else's directory. Set a private path interactively without recording
 
 ```bash
 read -r -p 'Approved private project directory: ' SHEEP_WORK_ROOT
+: "${SHEEP_WORK_ROOT:?Enter the approved private project directory first}"
 export SHEEP_WORK_ROOT
 umask 077
 mkdir -p "$SHEEP_WORK_ROOT"/{code,raw,interim,processed,results,tmp,metadata,envs}

@@ -62,7 +62,8 @@ jobs:
           esac
           julia --project=. --threads="${{ inputs.julia_threads }}" "$SCRIPT"
           test -d run_output
-          find run_output -type f -print0 | sort -z | xargs -0 sha256sum > run_output/SHA256SUMS.txt
+          find run_output -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > run_output/SHA256SUMS.txt
+          sha256sum --check run_output/SHA256SUMS.txt
           echo "Produced files:"
           find run_output -maxdepth 3 -type f -print | sort
       - uses: actions/upload-artifact@v4
