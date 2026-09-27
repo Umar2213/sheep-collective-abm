@@ -10,10 +10,10 @@ from run_analysis import digest
 
 def audit_file(path):
     before = digest(path)
-    frame = read_table(path)
     report = {"schema_version": 1, "input_sha256": before, "valid_structure": False,
               "notice": "Structural audit only. CRS, timezone, sensor error, permissions and biological independence require separate review."}
     try:
+        frame = read_table(path)
         report["structural"] = audit_trajectory_table(frame).to_dict()
         validate_trajectory_table(frame)
         report["valid_structure"] = True

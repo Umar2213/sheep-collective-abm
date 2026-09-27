@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from trajectory_validation import KEY_COLUMNS, circular_absolute_error, _missing_ids
+from trajectory_validation import KEY_COLUMNS, circular_absolute_error, _missing_ids, _timezone_missing, _whitespace_ids
 
 
 def score_predictions(frame, *, block_columns=("group_id", "bout_id")):
@@ -33,6 +33,10 @@ def score_predictions(frame, *, block_columns=("group_id", "bout_id")):
     data = frame.copy()
     if data.empty or _missing_ids(data, [*KEY_COLUMNS[:3], *block_columns, "model"]).any():
         raise ValueError("Nonempty predictions with complete identifiers required")
+    if _whitespace_ids(data, list(dict.fromkeys([*KEY_COLUMNS[:3], *block_columns, "model"]))).any():
+        raise ValueError("Prediction identifiers have surrounding whitespace")
+    if _timezone_missing(data.timestamp).any():
+        raise ValueError("Prediction timestamps require an explicit timezone and nonnumeric format")
     data["timestamp"] = pd.to_datetime(data.timestamp, utc=True, errors="coerce", format="mixed")
     if data.timestamp.isna().any():
         raise ValueError("Unparseable prediction timestamps")
@@ -108,7 +112,7 @@ def main():
         parser.error("Output already exists; choose a fresh file")
     scores = score_predictions(pd.read_csv(args.predictions, dtype=str, keep_default_na=False), block_columns=args.block_columns)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    scores.to_csv(args.output, index=False)
+    scores.to_csv(args.output, index=False, mode="x")
 
 
 if __name__ == "__main__":
