@@ -47,7 +47,7 @@ parameter-recovery analysis, independent social-tie characterization, matched
 computational controls, alternative behavioural kernels, and out-of-sample sheep
 prediction. Merely naming or fitting these components is not enough.
 
-## Required nested comparisons
+## Required model comparisons
 
 | Model | Responsiveness | Dyadic ties | Outgoing influence | Purpose |
 |---|---|---|---|---|

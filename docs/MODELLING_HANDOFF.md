@@ -22,6 +22,8 @@ retain the private definition, origin and projection/translation method with the
 A speed average uses total usable distance divided by total usable interval duration, so
 irregular intervals do not each receive equal weight. It describes observed usable coverage,
 not the animal's complete time budget. No path length is inferred across excluded gaps.
+When accuracy was not supplied, `prepared.csv` retains missing `accuracy_m` values and
+the audit records this omission. Do not replace these values with zero measurement error.
 
 The independently observed tie matrix, observation effort, collection window, direction
 convention, uncertainty and animal crosswalk must accompany an empirical handoff separately.

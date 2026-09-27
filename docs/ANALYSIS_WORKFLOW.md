@@ -32,6 +32,9 @@ Its interpretation must be checked against device documentation. The displacemen
 uses `displacement_sigma * hypot(accuracy_previous, accuracy_current)`; it is only a
 quality heuristic unless those accuracy values have the assumed statistical meaning.
 Missing accuracy values are not silently replaced with evidence of perfect accuracy.
+If the input omits `accuracy_m` entirely, the exported column is missing (blank in CSV),
+`accuracy_supplied` is false, and no accuracy-based exclusion or displacement floor is
+applied. This is an unquantified-error analysis, not evidence of error-free measurement.
 
 No interpolation, smoothing or resampling is performed. Prediction features require
 consecutive equal-duration intervals. Neighbours must have headings from the same past
