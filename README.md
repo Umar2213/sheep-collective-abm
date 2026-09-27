@@ -48,6 +48,13 @@ model definitions, frozen folds, uncertainty units, sensitivity checks and expor
 A future browser viewer can inspect `analysis_bundle.json` without recomputing results.
 All empirical exports require privacy review before sharing.
 
+## Private website analysis
+
+The [private service setup](docs/PRIVATE_ANALYSIS_SERVICE.md) connects the website to the
+reference Python workflow for uploads, run status, verified downloads and explicit retention.
+It requires a running approved service and HTTPS routing. The browser explorer remains a
+separate descriptive tool; opening the website alone does not start analysis on Mserver.
+
 ## Current model architecture
 
 For focal individual `i`, the model distinguishes three interaction components:
