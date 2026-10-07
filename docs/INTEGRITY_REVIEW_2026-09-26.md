@@ -3,8 +3,8 @@
 ## Scope
 
 Audit base: `793bc22dbfb0e774227277975af4652c2b5328fb`. This review covers the current
-repository and the empirical PhD requirements supplied by the researcher. It does not
-certify all possible inputs, completed PhD analyses, animal-study approvals or live Mserver
+repository and the empirical research requirements supplied by the researcher. It does not
+certify all possible inputs, completed empirical analyses, animal-study approvals or live Mserver
 configuration. Existing architecture and historical scientific outputs are preserved.
 
 ## Changes
