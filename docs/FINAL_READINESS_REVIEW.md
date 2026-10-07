@@ -1,10 +1,10 @@
-# PhD starting readiness, 2026-09-26
+# Empirical starting readiness, 2026-09-26
 
 ## Decision
 
 Ready to begin empirical study preparation and data auditing (WP0 to WP3), subject to
 approved data access. This is a tested research foundation, not a completed empirical
-PhD analysis or a guarantee of error-free software. No animal dataset was supplied for
+empirical analysis or a guarantee of error-free software. No animal dataset was supplied for
 this review. The website should expose the tested analysis workflow and its limitations.
 
 Review base: `bd7ddf4c1ae6e25749234d01463cc516dbcfd20a`. Its
@@ -60,7 +60,7 @@ the bundle is not automatically anonymous. A public demonstration should use syn
 The interface must not silently retune settings using held-out scores.
 
 There is no need to add M4, more simulation grids, a complex dashboard or automatic
-behavioural classifiers just to start the PhD. Prioritize an approved pilot dataset and its
+behavioural classifiers just to start the empirical study. Prioritize an approved pilot dataset and its
 study inventory. Use `MSERVER_SETUP.md` to validate the environment on the actual server;
 the pasted login banner is not a current quota or security assessment.
 
