@@ -4,8 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Julia 1.10.5](https://img.shields.io/badge/Julia-1.10.5-9558B2.svg)](https://julialang.org/)
 
-Research software supporting the empirical sheep component of ARC Discovery Project
-DP260101231, “How individual variation drives collective motion”. The PhD focus is
+Research software for empirical studies of sheep collective motion. The current focus is
 validated movement and social-behaviour data, individual variation, social relationships,
 and reliable empirical inputs for modelling. The Julia agent-based model is a supporting
 framework. No empirical sheep dataset or biological validation is included.
