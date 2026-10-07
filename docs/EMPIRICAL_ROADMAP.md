@@ -1,10 +1,10 @@
-# Empirical PhD workflow: WP0 to WP7
+# Empirical workflow: WP0 to WP7
 
 ## Scope and question
 
-The PhD contribution is the empirical sheep component feeding the modelling of ARC
-Discovery Project DP260101231, “How individual variation drives collective motion”.
-The repository supports this work; it does not establish results about real sheep.
+This roadmap describes an empirical sheep study designed to support modelling of
+collective motion and individual variation. The repository supports this work; it does not
+establish results about real sheep.
 
 Do persistent individual differences and stable social relationships explain held-out
 movement beyond common responsiveness and spatial proximity, and which quantities are
@@ -62,7 +62,7 @@ The existing shuffle controls have individual responsiveness, so they are matche
 not a pure M2 social-only permutation test. A few seeds do not yield a permutation p-value.
 Additional matched common-response shuffles should be added if required by the final WP5
 protocol. M4 is conditional on separately identifying outgoing influence; it is not a primary
-PhD requirement. Prediction gains are not causal effects.
+empirical requirement. Prediction gains are not causal effects.
 
 ## Completion criteria
 
