@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Sheep collective ABM: heterogeneous alignment-response simulations"
+authors:
+  - given-names: Umar
+    family-names: "Aziz"
+repository-code: "https://github.com/Umar2213/sheep-collective-abm"
+license: MIT
+date-released: "2026-06-13"
+
