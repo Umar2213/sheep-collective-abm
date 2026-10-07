@@ -1,0 +1,16 @@
+name: Basic checks
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Basic repository check"
+
+  julia:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Basic repository check"
