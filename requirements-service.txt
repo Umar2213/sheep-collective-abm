@@ -1,3 +1,0 @@
--r requirements.txt
-# Optional private HTTP adapter; scientific CLI dependencies remain unchanged.
-waitress==3.0.2
