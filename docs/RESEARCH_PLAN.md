@@ -2,8 +2,8 @@
 
 ## Scope
 
-The primary PhD scope is the empirical sheep component feeding the mathematical modelling
-of ARC Discovery Project DP260101231. Build a reproducible empirical pipeline and deliver
+The primary scope is the empirical sheep component supporting mathematical modelling
+of collective behaviour. Build a reproducible empirical pipeline and deliver
 validated data, biological measurements, statistical estimates, social-network information
 and model-validation evidence. The agent-based model supports this scope.
 
@@ -30,7 +30,7 @@ do individual responsiveness and independently characterized dyadic relationship
 non-redundant prediction of sheep movement beyond common response and spatial proximity?**
 
 Outgoing influence is an optional modelling extension only after separate identifiability
-is established. It is not a primary empirical PhD objective.
+is established. It is not a primary empirical objective.
 
 This is a candidate research contribution, not a novelty claim. `NOVELTY_MATRIX.md`
 records representative prior work and the evidence needed before a novelty statement is
