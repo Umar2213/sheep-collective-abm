@@ -97,6 +97,11 @@ def publish_result(result, output, *, inputs=None, sensitivity=None):
                  f"Declared data kind: {result['config'].get('data_kind', 'unspecified')}",
                  f"Eligible transitions: {result['audit']['eligible_transitions']}",
                  f"Uncertainty units: {result['audit']['uncertainty_units']}", "",
+                 f"Prediction interval (s): {result['audit']['sampling_interval_seconds']}", "",
+                 "## Coverage and prediction fallbacks", "",
+                 "Counts refer to eligible focal transitions, not independent biological replicates.", "",
+                 "```json", json.dumps({key: result['audit'][key] for key in
+                     ('coverage', 'prediction_status_counts', 'neighbour_fallback_counts')}, indent=2), "```", "",
                  "## Paired comparisons", "", "Differences are alternative minus reference in radians; negative favours the alternative.", "",
                  "```", table.to_string(index=False), "```", "", "## Interpretation limits", ""]
         lines += ["- "+w for w in result["audit"]["warnings"]]
@@ -165,3 +170,4 @@ def main():
 KEYS = ("group_id", "bout_id", "individual_id", "timestamp")
 if __name__ == "__main__":
     main()
+

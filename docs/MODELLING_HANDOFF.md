@@ -30,6 +30,14 @@ convention, uncertainty and animal crosswalk must accompany an empirical handoff
 These cannot be reconstructed from predictions. The current pipeline does not estimate tie
 uncertainty or validate behavioural states.
 
+The audit now records the common prediction interval, eligible-transition coverage counts,
+and prediction-weighted response and neighbour fallback counts. The same diagnostics appear
+in the report and browser bundle. Features retain explicit blocking metadata and neighbour
+availability counts; predictions retain interval, response status and neighbour fallback
+reason. These counts are not independent sample sizes. Bout rosters include only recorded
+animals and cannot establish complete flock coverage. Whole-group holdout uses common
+responses for previously unseen group/animal pairs and does not test stable individual traits.
+
 Verify a completed output folder:
 
 ```bash
@@ -46,3 +54,4 @@ Before biological use, include the data version, analysis version, study design,
 unit rationale, sample coverage, exclusions, sensor error, parameter-recovery evidence,
 validation population, limitations and reviewer decision. Successful synthetic tests and
 negative empirical findings must remain clearly distinguished.
+

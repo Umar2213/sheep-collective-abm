@@ -63,6 +63,20 @@ The integrated CSV reader rejects duplicate or blank column names.
 
 ## Train/test splitting
 
+The integrated pipeline accepts `session_id` and `date` as additional blocking columns,
+always including `group_id`. Supply explicit values, constant within each group/bout,
+and define their biological meaning before analysis. Session IDs must be unique within
+their declared group/day scope. Study days are not automatically derived from UTC.
+Selected columns are preserved through features, frozen folds, predictions and scoring.
+Use whole sessions/days when bouts within them are dependent; uncertainty units may need
+to be coarser still. See `ANALYSIS_WORKFLOW.md` for examples.
+
+All eligible heading predictions in one run must have a common interval. An optional
+`sampling_interval_seconds` configuration value checks the expected duration; otherwise
+the shared duration is inferred and recorded. Features and predictions export
+`interval_seconds` in seconds. Mixed intervals fail before response fitting rather than
+silently sharing a discrete-time parameter.
+
 Randomly splitting adjacent frames is not an acceptable primary validation strategy,
 because observations from the same animal and movement event are strongly dependent.
 
@@ -148,3 +162,4 @@ blocks; choosing individual bouts does not make bouts from the same flock indepe
 Choose the blocking level from the study design, before inspecting model differences.
 At least two matched blocks are required, but very few blocks yield weak uncertainty
 estimates. These utilities supply evaluation infrastructure, not empirical validation.
+
