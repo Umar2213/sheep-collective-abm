@@ -223,6 +223,9 @@ distance, and M3 versus M0, are now included alongside the conditional contrasts
 
 `manifest.json` records package versions, units and whether the Git worktree was dirty.
 Use `python src/verify_analysis.py OUTPUT` to verify all output hashes and file coverage.
+Add `--input trajectories=PATH` (and likewise `config`, `ties` or `folds`) to confirm that a
+handoff was produced from those exact files, such as an approved raw export kept outside
+Git. Recorded inputs that were not supplied are listed as `unverified_inputs`.
 The separate `src/audit_trajectories.py INPUT --output AUDIT.json` command performs a
 structural audit before model fitting, retaining diagnostics for invalid metric-schema data.
 
