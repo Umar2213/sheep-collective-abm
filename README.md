@@ -20,6 +20,9 @@ repeatability inference, training-only network estimation and empirical paramete
 still require study-specific work. See the roadmap for explicit gates.
 See the [2026-09-26 final starting-readiness review](docs/FINAL_READINESS_REVIEW.md)
 for the latest input-integrity fixes, verification evidence and remaining empirical work.
+The [2026-10-08 validation safeguards](docs/VALIDATION_GUARDS_2026-10-08.md) add common
+prediction-interval checks, explicit session/day blocking, strict fold coverage and
+per-prediction fallback diagnostics. See the analysis workflow before adapting real data.
 
 See the [model specification](docs/MODEL.md), [simulation validation protocol](docs/EXPERIMENT_PROTOCOL.md),
 [research plan](docs/RESEARCH_PLAN.md), [novelty matrix](docs/NOVELTY_MATRIX.md), and
@@ -234,3 +237,4 @@ confidence interval or proof of identifiability. See the
 ## Citation and license
 
 See `CITATION.cff` for software citation and `LICENSE` for the MIT license.
+

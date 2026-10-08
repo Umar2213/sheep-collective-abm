@@ -34,10 +34,11 @@ robust enough to transfer to the modelling team?
    new groups. The current fitter estimates responses within `(group_id, individual_id)`;
    an animal moving groups receives a separate group-specific fit. Stable study-wide
    animal IDs should still be retained. This is not a cross-context repeatability model.
-5. Choose splits and uncertainty units before looking at results. Current integrated
-   blocking supports group and group/bout only. For day/session splits, add explicit
-   support with tests; do not disguise them as arbitrary bout labels. Nonoverlapping
-   bouts from the same session can still be dependent.
+5. Choose splits and uncertainty units before looking at results. Integrated blocking
+   supports group, bout, explicit session and explicit study-day columns. Keep related
+   bouts in a complete session/day block; do not disguise sessions as arbitrary bout
+   labels. Nonoverlapping bouts from the same session can still be dependent. See
+   `ANALYSIS_WORKFLOW.md` for metadata checks and configuration examples.
 6. Predeclare preprocessing and radius settings. Supplied social ties must be independent
    of all analysed sessions. Training-derived ties need an estimator inside each fold;
    a global matrix with `ties_independent: true` is not a substitute.
@@ -73,3 +74,4 @@ are supporting modelling tasks, not prerequisites for starting WP0 to WP3.
 
 The app and website should consume versioned outputs from tested analysis code. They must
 not tune settings using held-out scores or make private exports public by default.
+
