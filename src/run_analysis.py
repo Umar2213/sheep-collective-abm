@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import replace
 import hashlib
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 import json
 from pathlib import Path
 import platform
@@ -20,6 +20,24 @@ from trajectory_pipeline import AnalysisConfig, read_table, run_pipeline
 def digest(path):
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+RECORDED_PACKAGES = ("numpy", "pandas", "scipy", "pyproj", "matplotlib")
+
+
+def package_versions(names=RECORDED_PACKAGES):
+    """Installed versions, with null for an absent optional package.
+
+    pyproj is imported only for GPS or named-CRS input. A metric analysis must not
+    fail after all computation merely because provenance lookup cannot find it.
+    """
+    versions = {}
+    for name in names:
+        try:
+            versions[name] = version(name)
+        except PackageNotFoundError:
+            versions[name] = None
+    return versions
 
 
 def write_json(path, obj):
@@ -118,7 +136,7 @@ def publish_result(result, output, *, inputs=None, sensitivity=None):
         except (OSError, subprocess.CalledProcessError):
             dirty = None
         manifest = {"schema_version": 1, "source_commit": sha, "source_dirty": dirty,
-                    "packages": {name: version(name) for name in ("numpy", "pandas", "scipy", "pyproj", "matplotlib")},
+                    "packages": package_versions(),
                     "units": {"coordinates": "metres", "time": "seconds", "angles": "radians", "speed": "metres/second"},
                     "python": platform.python_version(), "numpy": np.__version__, "pandas": pd.__version__,
                     "inputs": inputs or {}, "source_sha256": {p.name: digest(p) for p in Path(__file__).parent.glob("*.py")},
