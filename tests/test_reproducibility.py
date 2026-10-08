@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -34,6 +35,21 @@ class ReproducibilityTests(unittest.TestCase):
         self.assertIsNone(packages["pyproj"])
         self.assertEqual(packages["numpy"], installed_version("numpy"))
         self.assertEqual(set(packages), {"numpy", "pandas", "scipy", "pyproj", "matplotlib"})
+
+    def test_identical_analyses_publish_identical_output_hashes(self):
+        # Real figures are rendered; the second run starts at least one second later so
+        # an embedded wall-clock date would change the PDF and SVG bytes.
+        with tempfile.TemporaryDirectory() as tmp:
+            manifests = []
+            for name in ("first", "second"):
+                if manifests:
+                    time.sleep(1.1)
+                root = Path(tmp) / name
+                publish_result(self.result, root)
+                manifests.append(json.loads((root / "manifest.json").read_text())["outputs_sha256"])
+        self.assertTrue({"model_scores.pdf", "model_scores.svg", "movement.pdf", "movement.png"} <= set(manifests[0]))
+        differing = sorted(n for n in manifests[0] if manifests[0][n] != manifests[1].get(n))
+        self.assertEqual(differing, [])
 
 
 if __name__ == "__main__":

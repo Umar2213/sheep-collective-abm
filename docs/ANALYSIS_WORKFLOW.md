@@ -196,6 +196,9 @@ A fresh output directory contains:
 - `manifest.json`: original-input, source and output SHA-256 hashes plus software versions.
 
 Output publication is staged and atomic. Existing results are never silently overwritten.
+Figures carry no wall-clock dates or random SVG element IDs, so rerunning the same inputs,
+configuration, source and package versions reproduces every `outputs_sha256` entry. Compare
+the two manifests to confirm a rerun; a difference identifies the file that changed.
 Sensitive positions remain in local input files and any exports you choose to retain.
 Do not commit empirical trajectories or restricted relationship matrices to a public repo.
 
