@@ -42,8 +42,11 @@ Outputs: `estimates.csv` (one row per replicate, scenario, individual and kernel
 status), `summary.csv` (bias, RMSE, slope on truth, mean per-replicate Spearman rank
 correlation, boundary and ambiguity fractions, usable-heading fraction and fallback
 counts), `study.json` (settings), `recovery.{png,svg,pdf}` and `manifest.json`. Scenarios
-that leave no eligible transitions are recorded with status `no_eligible_transitions`
-rather than aborting the study. Set the grid from the planned sensor, sampling rate and
+the pipeline rejects outright, for example with no eligible transitions, are recorded with
+status `scenario_rejected` and the error message rather than aborting the study.
+Each scenario declares `sampling_interval_seconds` equal to its subsampled interval and
+`max_gap` of 1.5 intervals, so transitions spanning a missing fix are excluded by the
+existing gap filter and every fit describes one prediction horizon, as the pipeline requires. Set the grid from the planned sensor, sampling rate and
 animal speeds, not from these defaults.
 
 ## Default-grid results (seed 2026, 3 replicates, 45 individual fits per row)

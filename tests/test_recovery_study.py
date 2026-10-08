@@ -54,6 +54,16 @@ class ObservationModelTests(unittest.TestCase):
         self.assertFalse((rows.status == "estimated").any())
         self.assertTrue(rows.estimate.isna().all())
 
+    def test_missing_fixes_keep_one_prediction_interval_and_are_still_fitted(self):
+        # Gaps from dropout create longer intervals. They must be excluded by the gap
+        # filter, not cause the pipeline's common-interval guard to reject the scenario.
+        data, ties, truth = generate(seed=3, groups=2, sessions=2, animals=4, steps=40)
+        for scenario in (Scenario(dropout=0.1), Scenario(dropout=0.1, subsample=2)):
+            with self.subTest(scenario=scenario):
+                rows = recover(data, ties, truth, scenario, seed=2)
+                self.assertFalse((rows.status == "scenario_rejected").any(), rows.scenario_error.unique())
+                self.assertTrue((rows.status == "estimated").any())
+
 
 class RecoveryTests(unittest.TestCase):
     @classmethod
