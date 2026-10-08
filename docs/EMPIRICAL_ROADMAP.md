@@ -58,11 +58,12 @@ robust enough to transfer to the modelling team?
 | Individual response adds beyond relationships | M3 versus M2 |
 | Combined predictive performance | M3 versus M0, persistence, constant turn and distance |
 | Network labels matter | M3 versus network-shuffled individual-response controls |
+| Network labels matter without individual response | M2 versus network-shuffled common-response controls (opt-in) |
 
 The existing shuffle controls have individual responsiveness, so they are matched to M3,
 not a pure M2 social-only permutation test. A few seeds do not yield a permutation p-value.
-Additional matched common-response shuffles should be added if required by the final WP5
-protocol. M4 is conditional on separately identifying outgoing influence; it is not a primary
+Matched common-response shuffles, compared with M2, are available with
+`common_shuffle_controls: true`; enable them if the final WP5 protocol requires them. M4 is conditional on separately identifying outgoing influence; it is not a primary
 empirical requirement. Prediction gains are not causal effects.
 
 ## Completion criteria
