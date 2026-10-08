@@ -37,7 +37,12 @@ If the input omits `accuracy_m` entirely, the exported column is missing (blank 
 applied. This is an unquantified-error analysis, not evidence of error-free measurement.
 
 No interpolation, smoothing or resampling is performed. Prediction features require
-consecutive equal-duration intervals. Neighbours must have headings from the same past
+consecutive equal-duration intervals and one common interval across all eligible predictions
+in a run (absolute tolerance 0.000001 seconds). Set `sampling_interval_seconds` to a
+predeclared positive duration to check it explicitly. If omitted or null, the common
+duration is inferred and recorded in the audit, without tuning against outcomes. Mixed
+durations are rejected before fitting: use a justified synchronization procedure or separate
+analyses, not a pooled discrete-time responsiveness estimate. Neighbours must have headings from the same past
 interval as the focal animal. This may discard substantial asynchronous GPS data; obtain
 a justified synchronisation protocol before fitting such data, rather than guessing.
 
@@ -73,6 +78,19 @@ Holding out sessions asks about unseen sessions of possibly familiar individuals
 Holding out groups asks about new groups; individual parameters then fall back to a
 common training estimate when no training observations of those individuals exist.
 These are different prediction questions and must not be conflated.
+
+Integrated splitting supports `group_id` with `bout_id`, `session_id`, and/or `date`.
+For example, `split_columns: ["group_id", "session_id"]` keeps all bouts from a supplied
+session together. Use `uncertainty_columns: ["group_id"]` when groups are the independent
+units. Explicit `date` values must be assigned using the study's documented timezone and
+day definition; the pipeline never guesses study days from UTC. Declared blocking values
+must be complete, have no surrounding whitespace, and be constant across each group/bout.
+A bout crossing declared day/session boundaries must be resolved in documented preparation.
+Session IDs must identify complete sessions within their declared group/day scope.
+Using only `group_id,bout_id` still permits related bouts to fall into different folds;
+choose session or day blocking when the study requires it. Adding these options does not
+make sessions or days statistically independent. No nested tuning or final-holdout manager
+is implemented by this change.
 
 Group-level uncertainty can keep multiple sessions together. It still requires reasonable
 independence between groups. With one uncertainty unit the software withholds intervals.
@@ -111,6 +129,23 @@ explicit endpoint checks. This improves on a coarse interface grid but is not a 
 finding every conceivable extremely narrow optimum. Flat loss produces a labelled
 persistence fallback rather than an interpretable parameter estimate. Individual fits
 with insufficient training observations use a labelled common-training fallback.
+`predictions.csv` records `response_status` for each prediction. When a whole group is
+held out, its animals have no group-specific training fit: M1 reduces to M0, and M3 to M2.
+The audit and report expose fallback counts rather than interpreting this as evidence
+against individual variation. Familiar-animal prediction requires appropriate repeated
+training and held-out sessions.
+
+`features.csv` records `interval_seconds`, `n_neighbours` (usable synchronized headings),
+`n_nearby_positions`, `n_nearby_without_heading`, `n_recorded_at_timestamp`,
+`n_usable_positions`, `n_bout_roster`, and `n_bout_roster_unrecorded`. Nearby-position counts
+use fixes passing the positional-accuracy screen; they are not proof of valid movement.
+The roster is the union of animals recorded in that bout, not a verified census. Missing
+animals' distances cannot be inferred. Stationary or asynchronous neighbours may have
+usable positions without usable headings. Do not equate zero usable neighbours with
+social isolation. Each fitted model's `neighbour_fallback` distinguishes
+`no_usable_neighbours`, `zero_total_weight`, and `none`; non-social baselines use
+`not_applicable`. These reasons describe neighbour-input availability, not cancellation
+of opposing vectors or the fitter's parameter-identifiability flags.
 
 M2/M3 require a CSV with `group_id,focal_id,neighbour_id,weight`, covering exactly all
 non-self ordered pairs in every group, with explicit zero weights. The focal receives
@@ -187,3 +222,4 @@ distance, and M3 versus M0, are now included alongside the conditional contrasts
 Use `python src/verify_analysis.py OUTPUT` to verify all output hashes and file coverage.
 The separate `src/audit_trajectories.py INPUT --output AUDIT.json` command performs a
 structural audit before model fitting, retaining diagnostics for invalid metric-schema data.
+

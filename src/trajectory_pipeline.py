@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
 
-from trajectory_validation import validate_trajectory_table, assign_grouped_folds, KEY_COLUMNS
+from trajectory_validation import (validate_trajectory_table, assign_grouped_folds,
+                                   KEY_COLUMNS, _missing_ids, _whitespace_ids)
 from identifiability import blended_heading, fit_responsiveness, wrap_angle
 from prediction_evaluation import score_predictions, compare_models
 
@@ -26,6 +27,7 @@ class AnalysisConfig:
     min_speed: float = 0.05
     max_speed: float = 15.0
     max_gap: float = 10.0
+    sampling_interval_seconds: float | None = None
     max_accuracy: float = 10.0
     displacement_sigma: float = 2.0
     radius: float = 10.0
@@ -63,10 +65,16 @@ class AnalysisConfig:
             raise ValueError("n_bootstrap exceeds 100000")
         if not self.crs:
             raise ValueError("A coordinate reference system is required")
-        allowed = {"group_id", "bout_id"}
+        interval = self.sampling_interval_seconds
+        if interval is not None and (isinstance(interval, bool) or not isinstance(interval, (int, float))
+                                     or not np.isfinite(interval) or interval <= 0):
+            raise ValueError("sampling_interval_seconds must be finite and positive or null")
+        allowed = {"group_id", "bout_id", "session_id", "date"}
         for columns in (self.split_columns, self.uncertainty_columns):
-            if not columns or len(set(columns)) != len(columns) or not set(columns) <= allowed:
-                raise ValueError("Unique group_id and/or bout_id blocking columns required")
+            if (not isinstance(columns, (tuple, list)) or not columns
+                    or any(not isinstance(c, str) for c in columns)
+                    or len(set(columns)) != len(columns) or not set(columns) <= allowed):
+                raise ValueError("Unique group_id, bout_id, session_id and/or date blocking columns required")
         if "group_id" not in self.split_columns or "group_id" not in self.uncertainty_columns:
             raise ValueError("Blocking must include group_id to avoid collisions between sessions")
         if not set(self.uncertainty_columns) <= set(self.split_columns):
@@ -123,6 +131,16 @@ def prepare_trajectories(frame, config):
     ).all():
         raise ValueError("Timestamps require ISO 8601 with explicit timezone")
     data, audit = validate_trajectory_table(data)
+    # Never infer study days from UTC or relabel bouts to manufacture independence.
+    block_columns = list(dict.fromkeys([*config.split_columns, *config.uncertainty_columns]))
+    missing = set(block_columns) - set(data)
+    if missing:
+        raise ValueError(f"Missing biological blocking columns: {sorted(missing)}")
+    if _missing_ids(data, block_columns).any() or _whitespace_ids(data, block_columns).any():
+        raise ValueError("Biological blocking identifiers must be complete and have no surrounding whitespace")
+    for column in set(block_columns) - {"group_id", "bout_id"}:
+        if (data.groupby(["group_id", "bout_id"])[column].nunique() != 1).any():
+            raise ValueError(f"Each bout must belong to one {column}; define boundaries before splitting")
     # The same fix cannot belong to different held-out bouts.
     if data.duplicated(["group_id", "individual_id", "timestamp"]).any():
         raise ValueError("Overlapping bouts reuse an individual timestamp; resolve session boundaries before splitting")
@@ -251,9 +269,13 @@ def construct_features(data, config, ties=None):
     if ties is not None:
         networks.update({f"shuffle_{s}": shuffled_ties(ties, data, s) for s in config.shuffle_seeds})
     rows = []
+    # Only animals recorded somewhere in this bout, not a complete flock census.
+    roster = data.groupby(["group_id", "bout_id"]).individual_id.nunique()
     rejected = {"heading_or_target_missing": 0, "unequal_intervals": 0}
     for (g, b, time), frame in data.groupby(["group_id", "bout_id", "timestamp"], sort=True):
         available = frame[frame.heading.notna()]
+        positions = frame[frame.fix_usable]
+        position_tree = cKDTree(positions[["x", "y"]].to_numpy()) if len(positions) else None
         if len(available):
             tree = cKDTree(available[["x", "y"]].to_numpy())
         for r in frame.itertuples():
@@ -265,6 +287,8 @@ def construct_features(data, config, ties=None):
                 continue
             candidates = available.iloc[tree.query_ball_point([r.x, r.y], config.radius)]
             nb = candidates[(candidates.individual_id != r.individual_id) & (candidates.previous_time == r.previous_time)]
+            nearby = positions.iloc[position_tree.query_ball_point([r.x, r.y], config.radius)]
+            nearby = nearby[nearby.individual_id != r.individual_id]
             distances = np.hypot(nb.x-r.x, nb.y-r.y).to_numpy()
             heading = nb.heading.to_numpy()
             vectors = {}
@@ -272,19 +296,42 @@ def construct_features(data, config, ties=None):
                 if not len(weights) or not np.any(weights > 0):
                     # Exact no-neighbour fallback retains self for every r.
                     nx, ny = np.cos(r.heading), np.sin(r.heading)
+                    vectors[name+"_fallback"] = "no_usable_neighbours" if not len(nb) else "zero_total_weight"
                 else:
+                    vectors[name+"_fallback"] = "none"
                     weights = weights / weights.max()
                     nx, ny = np.average(np.cos(heading), weights=weights), np.average(np.sin(heading), weights=weights)
                 vectors[name+"_x"], vectors[name+"_y"] = float(nx), float(ny)
             turn = float(wrap_angle(r.heading-r.past_heading)) if np.isfinite(r.past_heading) and np.isclose(r.past_dt, r.dt, atol=1e-6, rtol=0) else 0.0
             rows.append({"group_id": g, "bout_id": b, "individual_id": r.individual_id,
+                         **{c: getattr(r, c) for c in sorted(set(config.split_columns) - {"group_id", "bout_id"})},
                          "timestamp": r.target_time, "predictor_timestamp": time,
+                         "interval_seconds": float(r.dt),
                          "self_heading": r.heading, "observed_heading": r.target,
                          "turn_prediction": float(wrap_angle(r.heading+turn)),
-                         "n_neighbours": len(nb), **vectors})
+                         "n_neighbours": len(nb), "n_nearby_positions": len(nearby),
+                         "n_nearby_without_heading": len(nearby)-len(nb),
+                         "n_bout_roster": int(roster[g, b]),
+                         "n_recorded_at_timestamp": len(frame),
+                         "n_usable_positions": len(positions),
+                         "n_bout_roster_unrecorded": int(roster[g, b])-len(frame), **vectors})
     if not rows:
         raise ValueError("No eligible heading transitions after fixed quality filters")
-    return pd.DataFrame(rows), rejected
+    features = pd.DataFrame(rows)
+    _require_common_interval(features, config)
+    return features, rejected
+
+
+def _require_common_interval(features, config):
+    """One discrete response parameter must describe one prediction horizon."""
+    intervals = pd.to_numeric(features["interval_seconds"], errors="coerce").to_numpy()
+    if not len(intervals) or not np.isfinite(intervals).all() or (intervals <= 0).any():
+        raise ValueError("Features require finite positive interval_seconds")
+    expected = config.sampling_interval_seconds
+    expected = float(intervals.min()) if expected is None else expected
+    if not np.isclose(intervals, expected, rtol=0, atol=1e-6).all():
+        raise ValueError("Mixed or unexpected sampling intervals: use a justified common interval or separate analyses")
+    return expected
 
 
 def make_folds(data, config, supplied=None):
@@ -318,7 +365,10 @@ def _fit(train, vector):
 
 
 def fit_predict(features, folds, config, has_ties=False):
-    f = features.merge(folds, on=list(config.split_columns), validate="many_to_one")
+    config.validate()
+    _require_common_interval(features, config)
+    # Uncovered observations must not silently disappear in an inner join.
+    f = features.merge(folds, on=list(config.split_columns), how="left", validate="many_to_one")
     if f.fold.isna().any() or set(f.fold) != set(range(config.n_folds)):
         raise ValueError("Every frozen fold must retain eligible transitions")
     definitions = [("M0", "uniform", False), ("M1", "uniform", True), ("distance", "distance", False)]
@@ -330,16 +380,18 @@ def fit_predict(features, folds, config, has_ties=False):
         train, test = f[f.fold != fold], f[f.fold == fold]
         if len(train) < 3 or len(test) < 1:
             raise ValueError("Insufficient train or test observations")
-        keys = test[list(KEY_COLUMNS)].copy()
+        keys = test[list(dict.fromkeys([*KEY_COLUMNS, *config.split_columns, "interval_seconds"]))].copy()
         keys["observed_heading"] = test.observed_heading
         keys["fold"] = fold
         keys["predictor_timestamp"] = test.predictor_timestamp
         for label, angles in [("persistence", test.self_heading), ("constant_turn", test.turn_prediction)]:
-            predictions.append(keys.assign(model=label, predicted_heading=np.asarray(angles)))
+            predictions.append(keys.assign(model=label, predicted_heading=np.asarray(angles),
+                                           response_status="not_fitted", neighbour_fallback="not_applicable"))
         for label, vector, individual in definitions:
             common = _fit(train, vector)
             parameters.append({"fold": fold, "model": label, "group_id": "", "individual_id": "", **common})
             pred = np.empty(len(test))
+            statuses = np.empty(len(test), dtype=object)
             for (g, i), indices in test.reset_index(drop=True).groupby(["group_id", "individual_id"]).groups.items():
                 part = test.iloc[indices]
                 estimate = common
@@ -351,7 +403,10 @@ def fit_predict(features, folds, config, has_ties=False):
                         estimate = {**common, "status": "insufficient_individual_training_common_fallback"}
                     parameters.append({"fold": fold, "model": label, "group_id": g, "individual_id": i, **estimate})
                 pred[indices] = blended_heading(part.self_heading.to_numpy(), part[vector+"_x"].to_numpy(), part[vector+"_y"].to_numpy(), estimate["responsiveness"])
-            predictions.append(keys.assign(model=label, predicted_heading=pred))
+                statuses[indices] = estimate["status"]
+            predictions.append(keys.assign(model=label, predicted_heading=pred,
+                                           response_status=statuses,
+                                           neighbour_fallback=test[vector+"_fallback"].to_numpy()))
     result = pd.concat(predictions, ignore_index=True)
     score_predictions(result)  # strict matched-key and common-target assertion
     return result.sort_values(["model", *KEY_COLUMNS]).reset_index(drop=True), pd.DataFrame(parameters)
@@ -392,6 +447,17 @@ def run_pipeline(frame, config, ties=None, folds=None):
     audit["distinct_group_animal_ids"] = prepared[["group_id", "individual_id"]].drop_duplicates().shape[0]
     audit["excluded_transitions"] = excluded
     audit["eligible_transitions"] = len(features)
+    audit["sampling_interval_seconds"] = _require_common_interval(features, config)
+    audit["prediction_status_counts"] = {
+        model: frame.response_status.value_counts().to_dict()
+        for model, frame in predictions.groupby("model")}
+    audit["neighbour_fallback_counts"] = {
+        model: frame.neighbour_fallback.value_counts().to_dict()
+        for model, frame in predictions.groupby("model")}
+    audit["coverage"] = {
+        "transitions_without_usable_neighbours": int(features.n_neighbours.eq(0).sum()),
+        "transitions_with_nearby_unusable_headings": int(features.n_nearby_without_heading.gt(0).sum()),
+        "transitions_with_unrecorded_bout_members": int(features.n_bout_roster_unrecorded.gt(0).sum())}
     audit["uncertainty_units"] = scores[list(config.uncertainty_columns)].drop_duplicates().shape[0]
     audit["warnings"] += [
         "Uncertainty intervals condition on fitted cross-validation predictions; they do not refit the full pipeline or correct multiple comparisons.",
@@ -401,7 +467,11 @@ def run_pipeline(frame, config, ties=None, folds=None):
         "No free outgoing-influence parameter is estimated alongside unrestricted ties."]
     if audit["uncertainty_units"] < 5:
         audit["warnings"].append("Fewer than five uncertainty units: interpret uncertainty as exploratory.")
+    if predictions.response_status.eq("insufficient_individual_training_common_fallback").any():
+        audit["warnings"].append("Some individual-model predictions use a common-training fallback. Whole-group holdout cannot test familiar-animal responsiveness with the current group-specific fitter; inspect prediction_status_counts.")
+    audit["warnings"].append("Neighbour coverage uses the recorded bout roster, not a known complete flock census. No usable neighbours can reflect missing or unusable observations, not social isolation.")
     return dict(prepared=prepared, audit=audit, features=features, folds=frozen,
                 movement=movement_summary(prepared), individual_bouts=individual_bout_summary(prepared), predictions=predictions,
                 parameters=parameters, scores=scores, comparisons=comparisons,
                 config=asdict(config))
+
