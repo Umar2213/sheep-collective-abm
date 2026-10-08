@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: sheep-motion-analysis-private
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements-service.txt
+    startCommand: python cloud_start.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.9
+      - key: SHEEP_ALLOWED_ORIGIN
+        value: https://raspy-sun-25b9.umaraziz.workers.dev
+      - key: SHEEP_API_TOKEN
+        sync: false
+      - key: SHEEP_WORK_ROOT
+        value: /var/data/sheep-analysis
+    disk:
+      name: sheep-research-private
+      mountPath: /var/data
+      sizeGB: 1
