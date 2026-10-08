@@ -39,10 +39,14 @@ class AnalysisConfig:
     shuffle_seeds: tuple = (11, 29, 47)
     seed: int = 42
     ties_independent: bool = False
+    # Relabelled-network controls with a common response, matched to M2 (opt-in).
+    common_shuffle_controls: bool = False
 
     def validate(self):
         if not isinstance(self.ties_independent, bool):
             raise ValueError("ties_independent must be a JSON boolean, not a string or number")
+        if not isinstance(self.common_shuffle_controls, bool):
+            raise ValueError("common_shuffle_controls must be a JSON boolean")
         if self.data_kind not in ("synthetic", "observational", "unspecified"):
             raise ValueError("data_kind must be synthetic, observational or unspecified")
         if self.coordinate_mode not in ("metric", "gps"):
@@ -375,6 +379,10 @@ def fit_predict(features, folds, config, has_ties=False):
     if has_ties:
         definitions += [("M2", "social", False), ("M3", "social", True)]
         definitions += [(f"shuffle_{s}", f"shuffle_{s}", True) for s in config.shuffle_seeds]
+        if config.common_shuffle_controls:
+            # Same relabelled networks, common response: isolates network labels from
+            # individual responsiveness, so these are compared with M2 rather than M3.
+            definitions += [(f"shuffle_common_{s}", f"shuffle_{s}", False) for s in config.shuffle_seeds]
     predictions, parameters = [], []
     for fold in range(config.n_folds):
         train, test = f[f.fold != fold], f[f.fold == fold]
@@ -419,7 +427,8 @@ def evaluate(predictions, config):
     if "M3" in models:
         pairs += [("M0", "M2"), ("distance", "M2")]
         pairs += [(ref, "M3") for ref in ("M0", "M1", "M2", "persistence", "constant_turn", "distance")]
-        pairs += [(m, "M3") for m in models if m.startswith("shuffle_")]
+        pairs += [(m, "M3") for m in models if m.startswith("shuffle_") and not m.startswith("shuffle_common_")]
+        pairs += [(m, "M2") for m in models if m.startswith("shuffle_common_")]
     n_units = scores[list(config.uncertainty_columns)].drop_duplicates().shape[0]
     comparisons = []
     for reference, alternative in pairs:
@@ -465,6 +474,8 @@ def run_pipeline(frame, config, ties=None, folds=None):
         "Network relabellings are negative controls, not a permutation significance test.",
         "Prediction gains do not establish causality, novelty or parameter identifiability.",
         "No free outgoing-influence parameter is estimated alongside unrestricted ties."]
+    if config.common_shuffle_controls and network is None:
+        audit["warnings"].append("common_shuffle_controls was requested without social ties; no network controls were fitted.")
     if audit["uncertainty_units"] < 5:
         audit["warnings"].append("Fewer than five uncertainty units: interpret uncertainty as exploratory.")
     if predictions.response_status.eq("insufficient_individual_training_common_fallback").any():

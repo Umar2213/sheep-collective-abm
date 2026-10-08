@@ -68,7 +68,8 @@ a justified synchronisation protocol before fitting such data, rather than guess
   "n_bootstrap": 2000,
   "shuffle_seeds": [11, 29, 47],
   "seed": 42,
-  "ties_independent": false
+  "ties_independent": false,
+  "common_shuffle_controls": false
 }
 ```
 
@@ -118,6 +119,7 @@ There are no periodic boundaries in observed-coordinate analysis.
 | M2 | Common response, independently supplied directed social weights |
 | M3 | Individual response, independently supplied directed social weights |
 | shuffle_SEED | Individual response, relabelled directed social network |
+| shuffle_common_SEED | Common response, the same relabelled network; only with `common_shuffle_controls: true` |
 
 The vector-blending rule and cancellation fallback use the existing tested implementation.
 No neighbours, or zero total social weight, produce a retain-self prediction. These cases
@@ -157,6 +159,10 @@ are not accepted as one supposedly independent global matrix.
 Network controls relabel complete matrices with fixed seeds, preserving their structure
 and weight distribution. Relabelling can have no effect for symmetric/uniform networks.
 A few shuffled controls are not a permutation test or a calibrated significance level.
+`shuffle_SEED` is compared with M3. Set `common_shuffle_controls: true` to add
+`shuffle_common_SEED`, compared with M2, so a network-label contrast is also available
+without individual responsiveness. The option is off by default so earlier configurations
+reproduce the same model set; without social ties it has no effect and is flagged in the audit.
 The distance-decay control remains an alignment kernel; constant-turn provides a
 non-social alternative. Other biologically justified movement kernels may still be needed.
 
