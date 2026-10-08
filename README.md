@@ -191,6 +191,12 @@ This negative result is scientifically useful. The model should be simplified wh
 data cannot identify a parameter rather than reporting a precise but uninterpretable
 estimate.
 
+`src/recovery_study.py` extends this to degraded observations: it runs the production
+preprocessing on synthetic groups with known responsiveness under location error, missing
+fixes and coarser sampling. On the default grid, recovery is close with exact positions but
+location error of 0.05 m already biases estimates upward. See
+[RECOVERY_STUDY.md](docs/RECOVERY_STUDY.md) before interpreting fitted responsiveness.
+
 ## Candidate research contribution
 
 The broad claims that individual heterogeneity matters, that individuals can have distinct
