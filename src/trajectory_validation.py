@@ -59,16 +59,32 @@ def _require_columns(frame: pd.DataFrame, required: Sequence[str] = REQUIRED_COL
         raise ValueError(f"Missing required trajectory columns: {missing}")
 
 
+def _flags(values, predicate):
+    """Boolean Series for any pandas dtype.
+
+    Series.map keeps the input dtype on empty string columns under pandas 3, so a
+    later sum would be "" rather than 0. Build an explicit boolean result instead.
+    """
+    return pd.Series([bool(predicate(value)) for value in values], index=values.index, dtype=bool)
+
+
+def _any_flag(frame, columns, predicate):
+    # Positional combination also tolerates duplicate index labels.
+    result = np.zeros(len(frame), dtype=bool)
+    for column in columns:
+        result |= _flags(frame[column], predicate).to_numpy()
+    return pd.Series(result, index=frame.index, dtype=bool)
+
+
 def _missing_ids(frame, columns):
-    return frame[list(columns)].isna().any(axis=1) | frame[list(columns)].apply(
-        lambda col: col.map(lambda value: isinstance(value, str) and not value.strip())
-    ).any(axis=1)
+    columns = list(columns)
+    blank = _any_flag(frame, columns, lambda value: isinstance(value, str) and not value.strip())
+    missing = frame[columns].isna().any(axis=1).to_numpy(dtype=bool)
+    return pd.Series(missing | blank.to_numpy(), index=frame.index, dtype=bool)
 
 
 def _whitespace_ids(frame, columns):
-    return frame[list(columns)].apply(
-        lambda col: col.map(lambda value: isinstance(value, str) and value != value.strip())
-    ).any(axis=1)
+    return _any_flag(frame, list(columns), lambda value: isinstance(value, str) and value != value.strip())
 
 
 def _timezone_missing(values):
@@ -81,7 +97,7 @@ def _timezone_missing(values):
             return not pd.isna(parsed) and parsed.tzinfo is None
         except (ValueError, TypeError, OverflowError):
             return False  # Unparseable values are reported separately.
-    return values.map(missing)
+    return _flags(values, missing)
 
 
 def _parsed_copy(frame: pd.DataFrame) -> pd.DataFrame:
