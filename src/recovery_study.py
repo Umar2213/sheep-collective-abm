@@ -88,9 +88,11 @@ def _replicate_seeds(seed, replicate):
 def recover(trajectories, ties, truth, scenario, *, seed=0, radius=10.0, min_transitions=10):
     """Fit every simulated individual under one scenario; returns per-individual rows."""
     observed = observe(trajectories, scenario, seed)
-    max_gap = max(10.0, 2.0 * scenario.subsample)
-    config = AnalysisConfig(data_kind="synthetic", radius=radius, max_gap=max_gap,
-                            shuffle_seeds=(), ties_independent=True)
+    # One discrete response describes one horizon, which the pipeline enforces. Intervals
+    # spanning a missing fix fail the existing gap filter, as an analyst would declare.
+    interval = float(scenario.subsample)
+    config = AnalysisConfig(data_kind="synthetic", radius=radius, max_gap=1.5 * interval,
+                            sampling_interval_seconds=interval, shuffle_seeds=(), ties_independent=True)
     base = truth[["group_id", "individual_id", "responsiveness"]].rename(columns={"responsiveness": "true_responsiveness"})
     try:
         prepared, _ = prepare_trajectories(observed, config)
@@ -98,8 +100,9 @@ def recover(trajectories, ties, truth, scenario, *, seed=0, radius=10.0, min_tra
         features, _ = construct_features(prepared, config, lookup)
         usable = float(prepared.heading.notna().mean())
     except ValueError as error:
-        # A scenario can destroy every usable heading; record it rather than abort the study.
-        rows = [dict(row, kernel=k, status="no_eligible_transitions", n_transitions=0, estimate=np.nan,
+        # Severe degradation can leave nothing the pipeline accepts; record the reason rather
+        # than abort the study, and keep it distinct from an individual-level shortfall.
+        rows = [dict(row, kernel=k, status="scenario_rejected", n_transitions=0, estimate=np.nan,
                      boundary_optimum=False, ambiguous_profile=False, usable_heading_fraction=0.0,
                      scenario_error=str(error)[:200])
                 for row in base.to_dict("records") for k in KERNELS]
@@ -144,7 +147,7 @@ def summarize(estimates):
                         estimated=len(fitted),
                         insufficient_transitions=int((frame.status == "insufficient_transitions").sum()),
                         flat_loss=int((frame.status == "flat_loss").sum()),
-                        no_eligible_transitions=int((frame.status == "no_eligible_transitions").sum()),
+                        scenario_rejected=int((frame.status == "scenario_rejected").sum()),
                         usable_heading_fraction=float(frame.groupby("replicate").usable_heading_fraction.first().mean()),
                         median_transitions=float(frame.n_transitions.median()),
                         bias=float(error.mean()) if len(fitted) else np.nan,
