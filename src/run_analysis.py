@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import replace
 import hashlib
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 import json
 from pathlib import Path
 import platform
@@ -22,15 +22,44 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+RECORDED_PACKAGES = ("numpy", "pandas", "scipy", "pyproj", "matplotlib")
+
+
+def package_versions(names=RECORDED_PACKAGES):
+    """Installed versions, with null for an absent optional package.
+
+    pyproj is imported only for GPS or named-CRS input. A metric analysis must not
+    fail after all computation merely because provenance lookup cannot find it.
+    """
+    versions = {}
+    for name in names:
+        try:
+            versions[name] = version(name)
+        except PackageNotFoundError:
+            versions[name] = None
+    return versions
+
+
 def write_json(path, obj):
     Path(path).write_text(json.dumps(obj, indent=2, allow_nan=False, default=str)+"\n")
+
+
+# Wall-clock dates and random SVG element IDs would make identical analyses hash
+# differently, so a rerun could never be checked against a published manifest.
+FIGURE_METADATA = {"svg": {"Date": None}, "pdf": {"CreationDate": None}, "png": {}}
+
+
+def save_figure(fig, output, stem):
+    for suffix, metadata in FIGURE_METADATA.items():
+        fig.savefig(output/f"{stem}.{suffix}", dpi=200, metadata=metadata)
 
 
 def figures(result, output):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    plt.rcParams.update({"font.size": 11, "svg.fonttype": "none", "axes.spines.top": False, "axes.spines.right": False})
+    plt.rcParams.update({"font.size": 11, "svg.fonttype": "none", "svg.hashsalt": "sheep-collective-abm",
+                         "axes.spines.top": False, "axes.spines.right": False})
     scores = result["scores"]
     data_label = result["config"].get("data_kind", "unspecified").capitalize()
     fig, ax = plt.subplots(figsize=(8, 4.8), layout="constrained")
@@ -41,8 +70,7 @@ def figures(result, output):
         ax.scatter(i, vals.mean(), marker="_", s=400, color="#132c43", linewidths=3)
     ax.set(xticks=range(len(names)), xticklabels=names, ylabel="Held-out mean absolute error (degrees)", title=f"{data_label} data: scores by uncertainty unit")
     ax.tick_params(axis="x", rotation=35)
-    for suffix in ("svg", "png", "pdf"):
-        fig.savefig(output/f"model_scores.{suffix}", dpi=200)
+    save_figure(fig, output, "model_scores")
     plt.close(fig)
     # Stable first session, full data remain available in CSV outputs.
     data = result["prepared"]
@@ -62,8 +90,7 @@ def figures(result, output):
     movement = movement[(movement.group_id == g) & (movement.bout_id == b)]
     axes[1].plot((movement.timestamp-movement.timestamp.min()).dt.total_seconds(), movement.alignment, color="#16857e")
     axes[1].set(xlabel="Time since session start (s)", ylabel="Directional alignment", ylim=(-.02, 1.02))
-    for suffix in ("svg", "png", "pdf"):
-        fig.savefig(output/f"movement.{suffix}", dpi=200)
+    save_figure(fig, output, "movement")
     plt.close(fig)
 
 
@@ -118,7 +145,7 @@ def publish_result(result, output, *, inputs=None, sensitivity=None):
         except (OSError, subprocess.CalledProcessError):
             dirty = None
         manifest = {"schema_version": 1, "source_commit": sha, "source_dirty": dirty,
-                    "packages": {name: version(name) for name in ("numpy", "pandas", "scipy", "pyproj", "matplotlib")},
+                    "packages": package_versions(),
                     "units": {"coordinates": "metres", "time": "seconds", "angles": "radians", "speed": "metres/second"},
                     "python": platform.python_version(), "numpy": np.__version__, "pandas": pd.__version__,
                     "inputs": inputs or {}, "source_sha256": {p.name: digest(p) for p in Path(__file__).parent.glob("*.py")},

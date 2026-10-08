@@ -68,7 +68,8 @@ a justified synchronisation protocol before fitting such data, rather than guess
   "n_bootstrap": 2000,
   "shuffle_seeds": [11, 29, 47],
   "seed": 42,
-  "ties_independent": false
+  "ties_independent": false,
+  "common_shuffle_controls": false
 }
 ```
 
@@ -118,6 +119,7 @@ There are no periodic boundaries in observed-coordinate analysis.
 | M2 | Common response, independently supplied directed social weights |
 | M3 | Individual response, independently supplied directed social weights |
 | shuffle_SEED | Individual response, relabelled directed social network |
+| shuffle_common_SEED | Common response, the same relabelled network; only with `common_shuffle_controls: true` |
 
 The vector-blending rule and cancellation fallback use the existing tested implementation.
 No neighbours, or zero total social weight, produce a retain-self prediction. These cases
@@ -157,6 +159,10 @@ are not accepted as one supposedly independent global matrix.
 Network controls relabel complete matrices with fixed seeds, preserving their structure
 and weight distribution. Relabelling can have no effect for symmetric/uniform networks.
 A few shuffled controls are not a permutation test or a calibrated significance level.
+`shuffle_SEED` is compared with M3. Set `common_shuffle_controls: true` to add
+`shuffle_common_SEED`, compared with M2, so a network-label contrast is also available
+without individual responsiveness. The option is off by default so earlier configurations
+reproduce the same model set; without social ties it has no effect and is flagged in the audit.
 The distance-decay control remains an alignment kernel; constant-turn provides a
 non-social alternative. Other biologically justified movement kernels may still be needed.
 
@@ -196,6 +202,9 @@ A fresh output directory contains:
 - `manifest.json`: original-input, source and output SHA-256 hashes plus software versions.
 
 Output publication is staged and atomic. Existing results are never silently overwritten.
+Figures carry no wall-clock dates or random SVG element IDs, so rerunning the same inputs,
+configuration, source and package versions reproduces every `outputs_sha256` entry. Compare
+the two manifests to confirm a rerun; a difference identifies the file that changed.
 Sensitive positions remain in local input files and any exports you choose to retain.
 Do not commit empirical trajectories or restricted relationship matrices to a public repo.
 
@@ -220,6 +229,9 @@ distance, and M3 versus M0, are now included alongside the conditional contrasts
 
 `manifest.json` records package versions, units and whether the Git worktree was dirty.
 Use `python src/verify_analysis.py OUTPUT` to verify all output hashes and file coverage.
+Add `--input trajectories=PATH` (and likewise `config`, `ties` or `folds`) to confirm that a
+handoff was produced from those exact files, such as an approved raw export kept outside
+Git. Recorded inputs that were not supplied are listed as `unverified_inputs`.
 The separate `src/audit_trajectories.py INPUT --output AUDIT.json` command performs a
 structural audit before model fitting, retaining diagnostics for invalid metric-schema data.
 

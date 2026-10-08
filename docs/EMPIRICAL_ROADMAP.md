@@ -18,7 +18,7 @@ robust enough to transfer to the modelling team?
 | WP1 | Immutable raw checksums, IDs, time, coordinates, duplicates, sampling gaps | `src/audit_trajectories.py`, `src/trajectory_validation.py` | Raw adapter and device quality semantics depend on actual files |
 | WP2 | Projection, fixed quality rules, synchronized trajectories, recorded exclusions | `src/trajectory_pipeline.py`, flagged `prepared.csv` | No automatic interpolation, smoothing or resampling; justify these before adding them |
 | WP3 | Biologically defensible sessions, movement bouts and states | Existing bout IDs respected; gaps and low-displacement headings flagged | No validated bout detector or behavioural classifier implemented |
-| WP4 | Within versus among-individual variation, repeatability, responsiveness, group position and initiation | `individual_bouts.csv` and training-only response fits | Summaries are descriptive; hierarchical repeatability and initiation/following require repeated independent observations and defined events |
+| WP4 | Within versus among-individual variation, repeatability, responsiveness, group position and initiation | `individual_bouts.csv`, training-only response fits and `src/recovery_study.py` | Summaries are descriptive; hierarchical repeatability and initiation/following require repeated independent observations and defined events |
 | WP5 | Stable dyadic relationships, observation effort and network uncertainty | Independent directed tie input, proximity and network-label controls | No fold-specific social estimator or stability inference implemented |
 | WP6 | M0 to M3 comparisons on complete held-out blocks | Frozen folds, matched scores, conditional cluster bootstrap, sensitivity | Final confirmatory holdout, nested tuning and alternative biological kernels depend on design |
 | WP7 | Versioned, uncertainty-aware empirical handoff | Manifest, units, source hashes, verifier and handoff checklist | Scientific review and approved access required before release |
@@ -47,6 +47,9 @@ robust enough to transfer to the modelling team?
 8. Run recovery under realistic location error, missingness and sampling intervals before
    interpreting fitted responsiveness. The existing noiseless one-step tests are insufficient
    to establish empirical identifiability, interval coverage or stable animal traits.
+   `src/recovery_study.py` runs this through the production preprocessing; set its grid from
+   the actual device and sampling design. See [RECOVERY_STUDY.md](RECOVERY_STUDY.md): on the
+   synthetic default grid, 0.05 m location error already inflates fitted responsiveness.
 
 ## Primary model contrasts
 
@@ -58,11 +61,12 @@ robust enough to transfer to the modelling team?
 | Individual response adds beyond relationships | M3 versus M2 |
 | Combined predictive performance | M3 versus M0, persistence, constant turn and distance |
 | Network labels matter | M3 versus network-shuffled individual-response controls |
+| Network labels matter without individual response | M2 versus network-shuffled common-response controls (opt-in) |
 
 The existing shuffle controls have individual responsiveness, so they are matched to M3,
 not a pure M2 social-only permutation test. A few seeds do not yield a permutation p-value.
-Additional matched common-response shuffles should be added if required by the final WP5
-protocol. M4 is conditional on separately identifying outgoing influence; it is not a primary
+Matched common-response shuffles, compared with M2, are available with
+`common_shuffle_controls: true`; enable them if the final WP5 protocol requires them. M4 is conditional on separately identifying outgoing influence; it is not a primary
 empirical requirement. Prediction gains are not causal effects.
 
 ## Completion criteria
