@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sheep-motion-analysis-private
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements-service.txt
+    startCommand: python cloud_start.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.9
+      - key: SHEEP_ALLOWED_ORIGIN
+        value: https://raspy-sun-25b9.umaraziz.workers.dev
+      - key: SHEEP_API_TOKEN
+        sync: false
+      - key: SHEEP_WORK_ROOT
+        value: /var/data/sheep-analysis
+      - key: SHEEP_MIN_FREE_BYTES
+        value: "536870912"   # 512 MiB; leaves room for the 20 retained runs on a 3 GB disk
+    disk:
+      name: sheep-research-private
+      mountPath: /var/data
+      sizeGB: 3   # was 1: below the service's 1 GiB free-space check, so every run would be refused
