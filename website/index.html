@@ -1,0 +1,2603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sheep Motion Lab</title>
+<meta name="description" content="Do individual differences and social relationships help predict how sheep move together? An auditable empirical pipeline, a flock model and a private analysis workspace.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EEF1EC; --paper-2:#E3E8E1; --card:#F8FAF6; --ink:#17242A; --ink-2:#4A5A5F; --line:#C9D2CB;
+  --raddle-blue:#1F5FBF; --raddle-red:#C2413A; --raddle-green:#3F7D4A; --tag:#F2C230;
+  --display:'Bricolage Grotesque',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --wrap:1180px; --gut:clamp(16px,4vw,48px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--raddle-blue);text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--raddle-blue);outline-offset:2px;border-radius:3px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.08;margin:0;font-weight:800;letter-spacing:-.015em}
+h2{font-size:clamp(32px,4.4vw,52px);max-width:16ch}
+h3{font-size:22px;font-weight:600;letter-spacing:-.005em}
+p{margin:0 0 1em;max-width:66ch}
+code,.mono{font-family:var(--mono);font-size:.84em}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 var(--gut)}
+.sym{font-family:var(--serif);font-style:italic;font-weight:600}
+.sym sub{font-size:.68em}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:20;background:rgba(238,241,236,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:24px;height:58px}
+.brand{font-family:var(--display);font-weight:800;font-size:19px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:10px;white-space:nowrap}
+.brand svg{flex:none}
+.nav ul{display:flex;gap:4px;list-style:none;margin:0 0 0 auto;padding:0;overflow-x:auto;scrollbar-width:none}
+.nav ul::-webkit-scrollbar{display:none}
+.nav a.l{font-family:var(--display);font-size:15px;color:var(--ink-2);text-decoration:none;padding:8px 11px;border-radius:8px;white-space:nowrap}
+.nav a.l:hover,.nav a.l.on{color:var(--ink);background:var(--paper-2)}
+.nav a.ws{background:var(--ink);color:#fff}
+.nav a.ws:hover{background:var(--raddle-blue);color:#fff}
+@media(max-width:820px){.nav ul li.hide-s{display:none}}
+@media(max-width:480px){.nav ul li.hide-xs{display:none}.brand{font-size:17px}}
+.nav ul{min-width:0}
+
+/* hero */
+.hero{position:relative;min-height:min(100svh,900px);display:grid;grid-template-rows:1fr auto;overflow:hidden;background:#F6F8F4;border-bottom:1px solid var(--line)}
+#flock{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero .wrap{width:100%}
+.hero-copy{position:relative;z-index:2;align-self:end;padding-top:clamp(56px,9vh,110px);padding-bottom:24px;pointer-events:none}
+.hero-copy h1{font-size:clamp(42px,6.6vw,92px);max-width:11ch;letter-spacing:-.035em;line-height:.95;font-weight:800}
+.hero-copy h1 span{display:block;font-weight:400;font-size:clamp(19px,.3em,27px);letter-spacing:0;line-height:1.35;margin-top:.7em;max-width:34ch;color:var(--ink-2);font-family:var(--serif)}
+.hero-copy .lede-box{background:rgba(246,248,244,.82);display:inline-block;padding:4px 10px 4px 0;border-radius:6px}
+.lab{position:relative;z-index:3;margin:0 0 var(--gut);display:grid;grid-template-columns:repeat(4,auto);gap:14px 28px;align-items:end;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:14px;padding:16px 20px;width:max-content;max-width:100%;box-shadow:0 10px 30px -18px rgba(23,36,42,.35)}
+.lab label{font-family:var(--display);font-size:14px;color:var(--ink-2);display:block}
+.lab label b{color:var(--ink);font-weight:600}
+.lab input[type=range]{width:170px;accent-color:var(--raddle-blue)}
+.phi{font-family:var(--display);font-size:13px;color:var(--ink-2)}
+.phi strong{display:block;font-size:40px;line-height:1;color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:4px}
+.seg button{font-family:var(--display);font-size:13px;border:0;background:transparent;padding:6px 11px;cursor:pointer;color:var(--ink-2)}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.icon-btn{font-family:var(--display);font-size:13px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;cursor:pointer;color:var(--ink)}
+.lab .note{grid-column:1/-1;font-size:13px;color:var(--ink-2);margin:0;line-height:1.4;max-width:62ch}
+@media(max-width:760px){.lab{grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;padding:14px}.lab input[type=range]{width:100%}.phi strong{font-size:32px}}
+
+/* sections */
+section.s{padding:clamp(72px,10vw,128px) 0;border-bottom:1px solid var(--line)}
+.s-head{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:24px 64px;align-items:end;margin-bottom:48px}
+.s-head p{color:var(--ink-2);margin:0}
+.kicker{font-family:var(--display);font-size:15px;color:var(--raddle-blue);font-weight:600;margin-bottom:14px;display:block}
+@media(max-width:860px){.s-head{grid-template-columns:1fr}}
+.alt{background:var(--paper-2)}
+
+/* ear tags */
+.tags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+@media(max-width:900px){.tags{grid-template-columns:1fr}}
+.tag{position:relative;background:var(--card);border:1px solid var(--line);border-radius:22px 22px 22px 22px;padding:30px 26px 24px}
+.tag .ear{position:absolute;top:-18px;left:24px;width:74px;height:56px;border-radius:30px 30px 14px 14px;display:grid;place-items:center;font-family:var(--serif);font-style:italic;font-weight:600;font-size:26px;color:#fff;box-shadow:inset 0 -4px 0 rgba(0,0,0,.15)}
+.tag .ear::before{content:"";position:absolute;top:8px;width:10px;height:10px;border-radius:50%;background:var(--paper);box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+.tag .ear span{margin-top:12px}
+.tag h3{margin:22px 0 8px}
+.tag p{font-size:16.5px;color:var(--ink-2);margin:0 0 10px}
+.tag .eg{font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin:0;color:var(--ink)}
+.ear.r{background:var(--raddle-green)} .ear.a{background:var(--raddle-blue)} .ear.q{background:var(--raddle-red)}
+.rule{margin:56px 0 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center}
+@media(max-width:900px){.rule{grid-template-columns:1fr}}
+.formula{font-family:var(--serif);font-size:clamp(20px,2.4vw,28px);line-height:1.5;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 28px}
+.formula .lbl{font-family:var(--display);font-size:14px;color:var(--ink-2);display:block;margin-bottom:6px}
+.formula i{font-weight:600}
+
+/* identifiability */
+.ident{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:48px;align-items:start}
+@media(max-width:900px){.ident{grid-template-columns:1fr}}
+.scale-demo{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px}
+.scale-demo input{width:100%;accent-color:var(--raddle-red)}
+.bars{display:grid;grid-template-columns:auto 1fr 64px;gap:10px 14px;align-items:center;margin-top:18px;font-family:var(--display);font-size:15px}
+.bars .track{height:14px;background:var(--paper-2);border-radius:7px;overflow:hidden}
+.bars .fill{height:100%;border-radius:7px;transition:width .25s}
+.bars .v{font-variant-numeric:tabular-nums;text-align:right}
+.verdict{margin-top:18px;padding:12px 14px;border-radius:10px;background:#E6EEF8;font-size:16px}
+
+/* ladder */
+.ladder{display:grid;gap:10px}
+.rung{display:grid;grid-template-columns:72px minmax(0,1fr) repeat(3,minmax(90px,140px));gap:16px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+.rung .m{font-family:var(--display);font-weight:800;font-size:28px}
+.rung .d{font-size:16px}
+.rung .c{font-family:var(--display);font-size:13.5px;text-align:center;padding:6px 8px;border-radius:8px;background:var(--paper-2);color:var(--ink-2)}
+.rung .c.on{background:var(--ink);color:#fff}
+.rung.cond{border-style:dashed;background:transparent}
+.ladder-head{display:grid;grid-template-columns:72px minmax(0,1fr) repeat(3,minmax(90px,140px));gap:16px;padding:0 18px;font-family:var(--display);font-size:14px;color:var(--ink-2)}
+.ladder-head span:nth-child(n+3){text-align:center}
+@media(max-width:760px){.rung,.ladder-head{grid-template-columns:52px 1fr;}.rung .c,.ladder-head span:nth-child(n+3){display:none}.rung .m{font-size:22px}}
+.contrasts{margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.contrast{border-left:4px solid var(--raddle-blue);padding:6px 0 6px 16px}
+.contrast b{font-family:var(--display);display:block;font-size:17px}
+.contrast span{font-size:16px;color:var(--ink-2)}
+
+/* charts */
+.chart-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:40px;align-items:start}
+@media(max-width:960px){.chart-grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 22px 16px}
+.panel-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.panel-top h3{font-size:19px}
+svg.chart{width:100%;height:auto;display:block;overflow:visible}
+svg.chart text{font-family:var(--display);font-size:12px;fill:var(--ink-2)}
+#forest text{font-size:inherit}
+svg.chart .ax{stroke:var(--line)}
+.flag{display:inline-block;font-family:var(--display);font-size:13px;padding:3px 10px;border-radius:999px;background:#F8E7E5;color:#8B2B25}
+.flag.syn{background:#E6EEF8;color:#1C4E9C}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--display);font-size:13.5px;color:var(--ink-2)}
+.legend i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:#fff;font-family:var(--display);font-size:13px;padding:7px 10px;border-radius:8px;opacity:0;transition:opacity .12s;z-index:50;line-height:1.35}
+.side p{font-size:17px}
+.thr{width:100%;border-collapse:collapse;font-family:var(--display);font-size:15px;margin:10px 0 18px;font-variant-numeric:tabular-nums}
+.thr th,.thr td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+.thr th{font-weight:600;color:var(--ink-2);font-size:13.5px}
+.caveat{border-left:4px solid var(--raddle-red);background:var(--card);padding:14px 16px;border-radius:0 10px 10px 0;font-size:16px}
+.caveat b{font-family:var(--display)}
+.sub-sec{margin-top:88px}
+
+/* pipeline */
+.wp{list-style:none;margin:0;padding:0;counter-reset:wp;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
+@media(max-width:960px){.wp{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.wp{grid-template-columns:1fr}}
+.wp li{position:relative;padding:22px 22px 26px;border-top:3px solid var(--ink)}
+.wp li .n{font-family:var(--display);font-weight:800;font-size:15px;color:var(--ink-2)}
+.wp li h3{font-size:20px;margin:6px 0 8px}
+.wp li p{font-size:16px;color:var(--ink-2);margin:0 0 12px}
+.st{font-family:var(--display);font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.st::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+.st.done{color:var(--raddle-green)} .st.part{color:#A0700A} .st.wait{color:var(--raddle-red)}
+.wp li.done{border-top-color:var(--raddle-green)} .wp li.part{border-top-color:#D9A21B} .wp li.wait{border-top-color:var(--raddle-red)}
+
+/* workspace */
+.ws-intro{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:24px 64px;margin-bottom:40px}
+@media(max-width:860px){.ws-intro{grid-template-columns:1fr}}
+.steps{display:grid;gap:18px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 18px}
+.step .num{font-family:var(--display);font-weight:800;font-size:15px;width:36px;height:36px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center}
+.step.done .num{background:var(--raddle-green)}
+.step h3{font-size:21px;margin:4px 0 4px}
+.step .body{grid-column:2}
+.step .help{font-size:15.5px;color:var(--ink-2);margin:2px 0 14px}
+@media(max-width:600px){.step{grid-template-columns:1fr}.step .body{grid-column:1}}
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field label,.lbl2{font-family:var(--display);font-size:14.5px;font-weight:600}
+.field small{font-family:var(--serif);font-size:14px;color:var(--ink-2);font-weight:400}
+input[type=text],input[type=url],input[type=password],textarea{font:inherit;font-size:16px;padding:10px 12px;border:1px solid #AEBBB2;border-radius:10px;background:#fff;color:var(--ink);width:100%}
+textarea{font-family:var(--mono);font-size:13.5px;min-height:250px;line-height:1.5}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid2.conn{grid-template-columns:2fr 1.4fr}
+@media(max-width:760px){.grid2,.grid2.conn{grid-template-columns:1fr}}
+@media(max-width:640px){.panel{overflow-x:auto}#prodChart,#recChart,#realChart{min-width:560px}.lab>div:nth-child(4){grid-column:1/-1}}
+.drop{border:1.5px dashed #AEBBB2;border-radius:12px;padding:14px;background:#fff;display:grid;gap:4px;font-size:15px}
+.drop b{font-family:var(--display);font-size:15px}
+.drop input{font-size:13.5px;font-family:var(--display);max-width:100%}
+.drop .meta{font-size:13.5px;color:var(--ink-2);font-family:var(--display)}
+.drop.ok{border-color:var(--raddle-green);border-style:solid}
+.drop.bad{border-color:var(--raddle-red);border-style:solid}
+.btn{font-family:var(--display);font-size:15.5px;font-weight:600;border:0;border-radius:10px;padding:11px 18px;cursor:pointer;background:var(--ink);color:#fff}
+.btn:hover{background:var(--raddle-blue)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid #AEBBB2}
+.btn.ghost:hover{background:#fff}
+.btn.danger{background:transparent;color:var(--raddle-red);border:1px solid var(--raddle-red)}
+.btn:disabled{opacity:.45;cursor:not-allowed;background:var(--ink)}
+.btn.ghost:disabled,.btn.danger:disabled{background:transparent}
+.radios{display:flex;gap:18px;flex-wrap:wrap;font-size:16px;margin-bottom:12px}
+.radios label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.radios input,.check input{accent-color:var(--raddle-blue);width:18px;height:18px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:16px;margin:14px 0}
+.status{font-family:var(--display);font-size:14.5px;display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--paper-2)}
+.status::before{content:"";width:9px;height:9px;border-radius:50%;background:#8E9A93}
+.status.ok{background:#E3F0E5;color:#255E31}.status.ok::before{background:var(--raddle-green)}
+.status.busy{background:#FBF1D6;color:#7A5300}.status.busy::before{background:#D9A21B;animation:pulse 1.2s infinite}
+.status.err{background:#F8E7E5;color:#8B2B25}.status.err::before{background:var(--raddle-red)}
+@keyframes pulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.status.busy::before{animation:none}}
+.msg{font-size:15.5px;margin:10px 0 0;min-height:1em}
+.msg.err{color:var(--raddle-red)}
+.svc-info{font-family:var(--display);font-size:14px;color:var(--ink-2);margin-top:10px}
+.jobs{width:100%;border-collapse:collapse;font-family:var(--display);font-size:14px;margin-top:12px}
+.jobs td,.jobs th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+.jobs th{color:var(--ink-2);font-weight:600}
+.results{margin-top:28px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:clamp(18px,3vw,32px)}
+.results h3{font-size:24px}
+.res-top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0 26px}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card)}
+.kpi b{display:block;font-family:var(--display);font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.kpi span{font-family:var(--display);font-size:13px;color:var(--ink-2)}
+.tbl-wrap{overflow-x:auto}
+.scores{border-collapse:collapse;font-family:var(--display);font-size:14px;width:100%;font-variant-numeric:tabular-nums}
+.scores th,.scores td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.scores th:first-child,.scores td:first-child{text-align:left}
+.scores th{color:var(--ink-2);font-weight:600}
+.scores tr.best td{background:#EEF5EF}
+.warnings{margin:0;padding-left:20px;font-size:15.5px}
+.warnings li{margin-bottom:6px}
+.res-block{margin-top:30px}
+.res-block h4{font-family:var(--display);font-size:18px;margin:0 0 4px}
+.res-block .help{font-size:15px;color:var(--ink-2);margin:0 0 12px}
+pre.log{background:var(--ink);color:#E6ECE8;font-size:12.5px;padding:14px;border-radius:10px;max-height:300px;overflow:auto;white-space:pre-wrap}
+.hidden{display:none !important}
+.progress{margin-top:14px;display:grid;gap:6px;font-family:var(--display);font-size:14.5px;color:var(--ink-2)}
+.progress-bar{height:10px;border-radius:5px;background:var(--paper-2);overflow:hidden}
+.progress-bar span{display:block;height:100%;width:0;background:var(--raddle-blue);border-radius:5px;transition:width .4s}
+@media (prefers-reduced-motion:reduce){.progress-bar span{transition:none}}
+.toggle{display:inline-flex;gap:8px;align-items:center;font-family:var(--display);font-size:14px;color:var(--ink-2);cursor:pointer}
+.toggle input{accent-color:var(--raddle-blue);width:16px;height:16px}
+
+/* repro */
+.repro{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:28px}
+.repro div b{font-family:var(--display);font-size:42px;font-weight:800;display:block;line-height:1;letter-spacing:-.02em}
+.repro div span{font-family:var(--display);font-size:15px;color:var(--ink-2)}
+.repro div p{font-size:16px;margin-top:10px}
+pre.cmd{background:var(--ink);color:#E6ECE8;font-family:var(--mono);font-size:13.5px;padding:18px 20px;border-radius:12px;overflow-x:auto;margin:32px 0 0;line-height:1.6}
+pre.cmd .c{color:#8FA7A0}
+.cite{margin-top:28px;font-size:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+
+footer{padding:48px 0 64px;font-size:15px;color:var(--ink-2)}
+footer .wrap{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+footer p{max-width:60ch;margin:0}
+</style>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Sheep Motion Lab, top of page">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><g fill="none" stroke-width="2.6" stroke-linecap="round"><path d="M4 20 L11 13" stroke="#3F7D4A"/><path d="M10 23 L18 15" stroke="#1F5FBF"/><path d="M15 12 L23 5" stroke="#C2413A"/></g><g fill="#17242A"><circle cx="11" cy="13" r="2.6"/><circle cx="18" cy="15" r="2.6"/><circle cx="23" cy="5" r="2.6"/></g></svg>
+      Sheep Motion Lab
+    </a>
+    <ul>
+      <li class="hide-s"><a class="l" href="#question">Question</a></li>
+      <li class="hide-s"><a class="l" href="#models">Models</a></li>
+      <li class="hide-xs"><a class="l" href="#evidence">Evidence</a></li>
+      <li class="hide-s"><a class="l" href="#pipeline">Pipeline</a></li>
+      <li><a class="l ws" href="#workspace">Workspace</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <canvas id="flock" aria-label="Live simulation of 200 sheep. Each arrow is one animal, coloured by the direction it is heading." role="img"></canvas>
+  <div class="wrap hero-copy">
+    <h1>Who follows whom in a flock?<span class="lede-box">Testing whether individual sheep and their relationships help predict how the flock moves.</span></h1>
+  </div>
+  <div class="wrap" style="position:relative;z-index:3">
+    <div class="lab" role="group" aria-label="Flock simulation controls">
+      <div>
+        <label for="sig">Individual difference <b class="sym">σ</b> = <b id="sigv">0.10</b></label>
+        <input id="sig" type="range" min="0" max="0.45" step="0.01" value="0.10">
+      </div>
+      <div>
+        <label for="eta">Decision noise <b class="sym">η</b> = <b id="etav">0.50</b></label>
+        <input id="eta" type="range" min="0" max="1.2" step="0.05" value="0.5">
+      </div>
+      <div class="phi" aria-live="off">Heading order <span class="sym">φ</span><strong id="phiv">–</strong></div>
+      <div>
+        <span class="lbl2" style="font-size:13px;color:var(--ink-2);display:block">Colour sheep by</span>
+        <div class="seg" role="group" aria-label="Colour sheep by">
+          <button type="button" data-col="heading" aria-pressed="true">Heading</button>
+          <button type="button" data-col="resp" aria-pressed="false">Responsiveness</button>
+        </div>
+        <button type="button" class="icon-btn" id="play" style="margin-left:6px">Pause</button>
+      </div>
+      <p class="note">Each arrow is a sheep. Every step it blends its own heading with its neighbours', weighted by its responsiveness <span class="sym">r</span>. Drag <span class="sym">σ</span> up and the flock splits. This is an in-browser illustration of the model rule; the reference simulation is the Julia code in the repository.</p>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="s" id="question">
+  <div class="wrap">
+    <div class="s-head">
+      <div><span class="kicker">The question</span><h2>Do individual sheep matter for where the flock goes?</h2></div>
+      <p>Individual differences, leadership and sheep flocking models are already well studied. The open question here is narrower and testable: do a sheep's own responsiveness and its independently measured relationships improve predictions of <em>unseen</em> movement, and can they be measured reliably at all?</p>
+    </div>
+    <div class="tags">
+      <article class="tag">
+        <div class="ear r"><span>r<sub>i</sub></span></div>
+        <h3>Responsiveness</h3>
+        <p>How strongly sheep <span class="sym">i</span> turns toward the average heading of its neighbours. 0 ignores them; 1 copies them.</p>
+        <p class="eg">An independent ewe might sit near 0.2, a strong follower near 0.9.</p>
+      </article>
+      <article class="tag">
+        <div class="ear a"><span>A<sub>ij</sub></span></div>
+        <h3>Relationship</h3>
+        <p>How much sheep <span class="sym">i</span> attends to one particular partner <span class="sym">j</span>. Measured from observations that are independent of the movement being predicted.</p>
+        <p class="eg">A ewe attends closely to her lamb and barely to a stranger.</p>
+      </article>
+      <article class="tag">
+        <div class="ear q"><span>q<sub>j</sub></span></div>
+        <h3>Influence</h3>
+        <p>How strongly sheep <span class="sym">j</span> is followed by everyone around it. Estimated only if the data can separate it from relationships.</p>
+        <p class="eg">An older, experienced ewe may be followed more widely.</p>
+      </article>
+    </div>
+    <div class="rule">
+      <div class="formula">
+        <span class="lbl">The movement rule for sheep i, each time step</span>
+        new heading = (1 − <i>r<sub>i</sub></i>) · own heading + <i>r<sub>i</sub></i> · Σ<sub>j</sub> <i>A<sub>ij</sub> q<sub>j</sub></i> · heading<sub>j</sub> / Σ<sub>j</sub> <i>A<sub>ij</sub> q<sub>j</sub></i>
+      </div>
+      <p style="margin:0">Neighbours are every sheep within a fixed radius. A little random noise <span class="sym">η</span> is added to each decision. With equal responsiveness, uniform ties and <span class="sym">q</span> = 1, the rule reduces exactly to the classic Vicsek flocking model, and an automated test checks that it does.</p>
+    </div>
+
+    <div class="ident sub-sec" id="ident">
+      <div>
+        <span class="kicker">What movement alone cannot tell us</span>
+        <h2 style="font-size:clamp(28px,3.4vw,40px)">Popular or loud? The data cannot say.</h2>
+        <p style="margin-top:18px">Each neighbour counts by the product <span class="sym">A<sub>ij</sub> × q<sub>j</sub></span>. Double every tie toward <span class="sym">j</span>, halve <span class="sym">j</span>'s influence, and every prediction stays identical. So from trajectories alone, a sheep everyone is closely tied to and a sheep that is simply followed are indistinguishable.</p>
+        <p>The repository proves this with a test and keeps influence out of the main models unless independent information separates the two. Reporting a precise number that means nothing is the failure this design avoids.</p>
+      </div>
+      <div class="scale-demo">
+        <label class="lbl2" for="cscale">Rescale sheep j: multiply ties by c, divide influence by c. c = <span id="cval">1.0</span></label>
+        <input id="cscale" type="range" min="0.25" max="4" step="0.05" value="1">
+        <div class="bars" aria-live="polite">
+          <span>Tie <span class="sym">A<sub>ij</sub></span></span><div class="track"><div class="fill" id="bA" style="background:var(--raddle-blue)"></div></div><span class="v" id="vA"></span>
+          <span>Influence <span class="sym">q<sub>j</sub></span></span><div class="track"><div class="fill" id="bQ" style="background:var(--raddle-red)"></div></div><span class="v" id="vQ"></span>
+          <span>Weight <span class="sym">A × q</span></span><div class="track"><div class="fill" id="bP" style="background:var(--ink)"></div></div><span class="v" id="vP"></span>
+        </div>
+        <div class="verdict">Predicted movement: <b>unchanged</b>. Any value of c fits the data equally well.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="s alt" id="models">
+  <div class="wrap">
+    <div class="s-head">
+      <div><span class="kicker">The model ladder</span><h2>Add one idea at a time. Keep it only if it predicts.</h2></div>
+      <p>Every model uses the same movement rule, data split and scoring. Each rung adds a single biological idea. If a rung does not beat the one below on held-out groups or days, the idea is not supported, and that is a valid result.</p>
+    </div>
+    <div class="ladder-head" aria-hidden="true"><span></span><span></span><span>Own responsiveness</span><span>Measured ties</span><span>Free influence</span></div>
+    <div class="ladder">
+      <div class="rung"><span class="m">M0</span><span class="d">Every sheep identical, listening equally to all neighbours. The baseline.</span><span class="c">common</span><span class="c">uniform</span><span class="c">fixed</span></div>
+      <div class="rung"><span class="m">M1</span><span class="d">Sheep differ in how strongly they follow.</span><span class="c on">individual</span><span class="c">uniform</span><span class="c">fixed</span></div>
+      <div class="rung"><span class="m">M2</span><span class="d">Sheep weight their social partners more.</span><span class="c">common</span><span class="c on">measured</span><span class="c">fixed</span></div>
+      <div class="rung"><span class="m">M3</span><span class="d">Both individual differences and relationships.</span><span class="c on">individual</span><span class="c on">measured</span><span class="c">fixed</span></div>
+      <div class="rung cond"><span class="m">M4</span><span class="d">Adds free influence, only if recovery tests show it can be identified.</span><span class="c on">individual</span><span class="c on">measured</span><span class="c on">estimated</span></div>
+    </div>
+    <div class="contrasts">
+      <div class="contrast"><b>M1 against M0</b><span>Does knowing each sheep's responsiveness help?</span></div>
+      <div class="contrast"><b>M2 against M0 and distance-only</b><span>Do relationships help beyond who is simply nearest?</span></div>
+      <div class="contrast"><b>M3 against M1 and M2</b><span>Do the two ideas add information the other lacks?</span></div>
+      <div class="contrast"><b>M3 against shuffled networks</b><span>Is it the real relationships, or any network of the same shape?</span></div>
+    </div>
+    <p style="margin-top:36px;font-size:16.5px;color:var(--ink-2)">Fair testing rules: whole groups, bouts or days are held out, never neighbouring GPS fixes; uncertainty is counted per held-out unit with a paired block bootstrap; and models must also beat persistence, constant-turn and distance-only controls.</p>
+  </div>
+</section>
+
+<section class="s" id="evidence">
+  <div class="wrap">
+    <div class="s-head">
+      <div><span class="kicker">Evidence so far</span><h2>What the method shows, on models and on real sheep.</h2></div>
+      <p>Stored simulations show how heading order responds to individual differences, a recovery study shows how much tracking error the method can tolerate, and a run on public sheep data shows what the full pipeline concludes from real animals.</p>
+    </div>
+    <div class="chart-grid">
+      <div class="panel">
+        <div class="panel-top"><h3>Heading order falls once sheep differ enough</h3><span class="flag">Legacy approximate-search runs</span></div>
+        <div class="legend" id="prodLegend"></div>
+        <svg class="chart" id="prodChart" viewBox="0 0 640 380" role="img" aria-label="Line chart of heading order phi against individual difference sigma for three noise levels. Order stays near 1 until sigma is about 0.3, then falls to about 0.55 to 0.6 at sigma 0.45."></svg>
+      </div>
+      <div class="side">
+        <p>200 simulated sheep, mean responsiveness 0.7, 20 runs at each of 57 settings. The flock stays aligned while differences are small, then order drops quickly. More noise makes the drop come earlier.</p>
+        <table class="thr"><thead><tr><th>Noise η</th><th>σ where φ falls below 0.90</th><th>95% bootstrap range</th></tr></thead><tbody id="thrBody"></tbody></table>
+        <div class="caveat"><b>Read with care.</b> These runs used an approximate neighbour search, so the realised interaction radius was not exactly 1. The code now uses exact search and the full sweep needs re-running. An earlier phase-transition claim was withdrawn after audit: 323 of 1,520 size-comparison runs were still drifting.</div>
+      </div>
+    </div>
+
+    <div class="chart-grid sub-sec">
+      <div class="panel">
+        <div class="panel-top"><h3>Small tracking errors distort individual estimates</h3>
+          <div class="seg" role="group" aria-label="Recovery metric">
+            <button type="button" data-rec="rho" aria-pressed="true">Rank agreement</button>
+            <button type="button" data-rec="bias" aria-pressed="false">Bias</button>
+            <button type="button" data-rec="rmse" aria-pressed="false">Error</button>
+          </div>
+        </div>
+        <svg class="chart" id="recChart" viewBox="0 0 640 330" role="img" aria-label="Bar chart of responsiveness recovery under different tracking problems."></svg>
+        <p style="font-size:14px;color:var(--ink-2);margin:8px 0 0"><span class="flag syn">Synthetic</span> Seed 2026, 3 replicates, 45 individual fits per scenario; true responsiveness 0.15 to 0.85; steps of 0.65 m.</p>
+      </div>
+      <div class="side">
+        <p>Synthetic groups with known responsiveness were degraded with position error, missing fixes and slower sampling, then fitted by the same pipeline used for real data.</p>
+        <p>With exact positions the fit recovers each sheep closely and in the right order. Just <b>5 cm</b> of error makes sheep look more responsive than they are, and at <b>25 cm</b> the ranking of sheep is lost.</p>
+        <p>Many ordinary GPS collars have errors of metres. Sensor precision relative to how far a sheep moves between fixes therefore decides whether individual differences can be measured at all.</p>
+      </div>
+    </div>
+
+    <div class="chart-grid sub-sec" id="realdata">
+      <div class="panel">
+        <div class="panel-top"><h3>Applied to 14 real Merino sheep</h3>
+          <div class="seg" role="group" aria-label="Prediction interval">
+            <button type="button" data-iv="0.5" aria-pressed="false">0.5 s</button>
+            <button type="button" data-iv="1" aria-pressed="true">1 s</button>
+            <button type="button" data-iv="2" aria-pressed="false">2 s</button>
+          </div>
+        </div>
+        <svg class="chart" id="realChart" viewBox="0 0 640 300" role="img" aria-label="Change in held-out heading error for key model contrasts on public sheep data"></svg>
+        <p style="font-size:14px;color:var(--ink-2);margin:8px 0 0" id="realNote"></p>
+      </div>
+      <div class="side">
+        <p>Public tracking data from 14 ewes herded by a dog (Jadhav et al. 2024, <em>Communications Biology</em>), run through the repository pipeline with settings fixed in a written protocol before any model was fitted. Each of 8 trials is held out in turn.</p>
+        <p>Copying neighbours' headings clearly predicts better than keeping one's own heading. Giving each sheep its own responsiveness, or weighting neighbours by ties measured in a separate trial, adds little or nothing at 0.5 s and 1 s. At 2 s individual responsiveness gives a small, consistent gain.</p>
+        <div class="caveat"><b>Read with care.</b> All 8 trials involve the same 14 sheep, so intervals are exploratory. Ties are spatial associations from an independent trial, not observed affiliations. The dog is not modelled.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="s alt" id="pipeline">
+  <div class="wrap">
+    <div class="s-head">
+      <div><span class="kicker">From tracking file to model input</span><h2>Eight work packages, each with a gate.</h2></div>
+      <p>The empirical side turns raw tracking data into verified numbers for the modelling team. Nothing is silently repaired: bad rows are flagged, every exclusion is recorded, and every output is fingerprinted.</p>
+    </div>
+    <ol class="wp">
+      <li class="part"><span class="n">WP0</span><h3>Study inventory</h3><p>Owner, ethics, sensors, animals and dates, kept privately outside the code.</p><span class="st part">Template ready</span></li>
+      <li class="done"><span class="n">WP1</span><h3>Raw audit</h3><p>Checksums, IDs, time zones, coordinates, duplicates and gaps.</p><span class="st done">Implemented</span></li>
+      <li class="done"><span class="n">WP2</span><h3>Quality rules</h3><p>Projection to metres and fixed filters. No invented interpolation.</p><span class="st done">Implemented</span></li>
+      <li class="part"><span class="n">WP3</span><h3>Bouts and sessions</h3><p>Biologically meaningful movement periods.</p><span class="st part">Uses supplied labels</span></li>
+      <li class="part"><span class="n">WP4</span><h3>Individual variation</h3><p>Responsiveness fits per training fold; repeatability needs repeated observations.</p><span class="st part">Fitting ready</span></li>
+      <li class="wait"><span class="n">WP5</span><h3>Relationships</h3><p>Independent tie input and shuffle controls; tie estimation needs real data.</p><span class="st wait">Needs data</span></li>
+      <li class="done"><span class="n">WP6</span><h3>Model comparison</h3><p>M0 to M3 on held-out blocks with paired uncertainty.</p><span class="st done">Implemented</span></li>
+      <li class="done"><span class="n">WP7</span><h3>Verified hand-off</h3><p>Units, provenance, manifest and checksum verification.</p><span class="st done">Implemented</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="s" id="workspace">
+  <div class="wrap">
+    <div class="ws-intro">
+      <div><span class="kicker">Workspace</span><h2>Run the reference analysis on your own data.</h2></div>
+      <div>
+        <p>The analysis is always the repository's own Python pipeline. It can run inside this browser tab, with nothing uploaded anywhere, or on an approved private server reached over HTTPS with a private token. Tokens and data are never saved in the browser.</p>
+        <div class="row"><button class="btn ghost" type="button" id="loadDemo">Load recorded sheep run</button><span style="font-size:15px;color:var(--ink-2)">Shows a completed run on public data from 14 Merino sheep, without a server.</span></div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step" id="stepConnect">
+        <span class="num">1</span>
+        <div class="body">
+          <h3>Choose where the analysis runs</h3>
+          <div class="radios" role="radiogroup" aria-label="Where the analysis runs">
+            <label><input type="radio" name="where" value="browser" checked> In this browser (no server needed)</label>
+            <label><input type="radio" name="where" value="server"> On an analysis server</label>
+          </div>
+          <div id="modeBrowser">
+            <p class="help">Runs the repository's own Python code, unchanged, inside this browser tab using WebAssembly. Your files are not uploaded anywhere. The first start downloads about 45 MB; use a laptop or desktop computer.</p>
+            <div class="row"><button class="btn" type="button" id="btnEngine">Start the analysis engine</button><span class="status" id="engStatus">Not started</span></div>
+            <div class="svc-info" id="engInfo"></div>
+            <p class="msg" id="engMsg"></p>
+          </div>
+          <div id="modeServer" class="hidden">
+            <p class="help">Use the HTTPS address your administrator set up, and the token from the server's private <code>access-token</code> file.</p>
+            <div class="grid2 conn">
+              <div class="field"><label for="svcUrl">Server address</label><input id="svcUrl" type="url" placeholder="https://your-server.example.edu/sheep-api" autocomplete="off" spellcheck="false"></div>
+              <div class="field"><label for="svcToken">Access token</label><input id="svcToken" type="password" autocomplete="off" spellcheck="false"></div>
+            </div>
+            <div class="row"><button class="btn" type="button" id="btnConnect">Connect</button><button class="btn ghost" type="button" id="btnDisconnect" disabled>Disconnect</button><span class="status" id="svcStatus">Not connected</span></div>
+            <div class="svc-info" id="svcInfo"></div>
+            <p class="msg" id="connectMsg"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" id="stepData">
+        <span class="num">2</span>
+        <div class="body">
+          <h3>Choose your files</h3>
+          <p class="help">Trajectories need <code>group_id</code>, <code>bout_id</code>, <code>individual_id</code>, <code>timestamp</code> (with time zone) and <code>x</code>, <code>y</code> in metres. GPS files need latitude, longitude and a justified projected CRS in the settings. Up to 8 MB and 20,000 rows per file.</p>
+          <div class="grid2">
+            <div class="drop" id="dropTraj"><b>Trajectories</b><span class="meta">Required</span><input type="file" id="fTraj" accept=".csv,text/csv"><span class="meta" id="mTraj">No file chosen</span></div>
+            <div class="drop" id="dropTies"><b>Social ties</b><span class="meta">Optional, independent of these sessions</span><input type="file" id="fTies" accept=".csv,text/csv"><span class="meta" id="mTies">No file chosen</span></div>
+            <div class="drop" id="dropFolds"><b>Frozen folds</b><span class="meta">Optional</span><input type="file" id="fFolds" accept=".csv,text/csv"><span class="meta" id="mFolds">No file chosen</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" id="stepConfig">
+        <span class="num">3</span>
+        <div class="body">
+          <h3>Declare the study design</h3>
+          <p class="help">Settings shown are a template, not validated thresholds for your sensor. Fix them before looking at results.</p>
+          <div class="row" style="margin-bottom:14px"><button class="btn ghost" type="button" id="presetSheep">Use public sheep demo settings</button><span style="font-size:14.5px;color:var(--ink-2)">Loads the pre-declared settings for the prepared Jadhav et al. (2024) files.</span></div>
+          <span class="lbl2">Data origin</span>
+          <div class="radios"><label><input type="radio" name="kind" value="observational" checked> Observational sheep data</label><label><input type="radio" name="kind" value="synthetic"> Synthetic test data</label></div>
+          <span class="lbl2">Social ties were measured independently of the analysed sessions</span>
+          <div class="radios"><label><input type="radio" name="indep" value="false" checked> No</label><label><input type="radio" name="indep" value="true"> Yes</label></div>
+          <div class="field"><label for="cfg">Settings (JSON)</label><textarea id="cfg" spellcheck="false"></textarea></div>
+          <p class="msg" id="cfgMsg"></p>
+          <label class="check"><input type="checkbox" id="consent"> <span id="consentText">I am authorised to analyse these files.</span></label>
+          <div class="row"><button class="btn" type="button" id="btnRun" disabled>Run analysis</button><button class="btn ghost" type="button" id="btnJobs" disabled>Show previous runs</button><span class="status hidden" id="runStatus"></span></div>
+          <div class="progress hidden" id="progWrap" aria-live="polite"><div class="progress-bar"><span id="progBar"></span></div><span id="progLabel"></span></div>
+          <p class="msg" id="runMsg"></p>
+          <div id="jobsBox" class="hidden tbl-wrap"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results" id="results">
+      <div class="res-top"><h3 id="resTitle">Results</h3><span id="resFlag"></span></div>
+      <p class="svc-info hidden" id="resHash" style="margin:-6px 0 6px"></p>
+      <p id="resEmpty" style="color:var(--ink-2);margin:0">No results yet. Connect and run an analysis, or load the demo results to see what a run returns.</p>
+      <div id="resBody" class="hidden">
+        <div class="kpis" id="kpis"></div>
+        <div class="res-block">
+          <div class="row" style="justify-content:space-between"><h4>Paired comparisons on held-out blocks</h4><label class="toggle"><input type="checkbox" id="showShuffles"> Show network-shuffle controls</label></div>
+          <p class="help">Change in mean angular error when switching from the reference to the alternative model. Left of zero means the alternative predicts better. Bars are 95% intervals from a paired block bootstrap, conditional on the fitted predictions.</p>
+          <p class="help" style="margin:10px 0 4px;font-family:var(--display);color:var(--ink)">Social models against non-social baselines</p>
+          <svg class="chart" id="forestBase" role="img" aria-label="Forest plot: social models against persistence and constant-turn baselines"></svg>
+          <p class="help" style="margin:18px 0 4px;font-family:var(--display);color:var(--ink)">Between social models (finer scale)</p>
+          <svg class="chart" id="forest" role="img" aria-label="Forest plot: contrasts between social models"></svg>
+        </div>
+        <div class="res-block">
+          <h4>Held-out error by model</h4>
+          <p class="help">Mean absolute heading error in degrees for each held-out uncertainty unit. Lowest mean is highlighted.</p>
+          <div class="tbl-wrap"><table class="scores" id="scoreTbl"></table></div>
+        </div>
+        <div class="res-block">
+          <h4>Quality and interpretation warnings</h4>
+          <ul class="warnings" id="warnList"></ul>
+        </div>
+        <div class="res-block row" id="resActions">
+          <button class="btn" type="button" id="btnZip" disabled>Download all results (.zip)</button>
+          <button class="btn danger" type="button" id="btnDelete" disabled>Delete server copy</button>
+        </div>
+        <p class="help" style="font-size:14.5px;color:var(--ink-2);margin-top:12px">The archive holds CSVs, the audit, the manifest, figures and a report. It can contain sensitive positions; keep it in approved study storage.</p>
+      </div>
+      <pre class="log hidden" id="logBox"></pre>
+    </div>
+  </div>
+</section>
+
+<section class="s alt" id="repro">
+  <div class="wrap">
+    <div class="s-head">
+      <div><span class="kicker">Reproducibility</span><h2>Every number can be traced and re-run.</h2></div>
+      <p>The repository audits its own history, rejects silently altered outputs and records the exact source, environment and seeds behind each run.</p>
+    </div>
+    <div class="repro">
+      <div><b>103</b><span>automated Python tests</span><p>Plus Julia unit, parse and smoke tests, re-run by GitHub Actions on each change.</p></div>
+      <div><b>2,660</b><span>stored simulation runs</span><p>1,140 production and 1,520 size-comparison replicates, with aggregates that reproduce from the rows.</p></div>
+      <div><b>SHA-256</b><span>output fingerprints</span><p>The verifier rejects altered, missing, extra or linked files in any output folder.</p></div>
+      <div><b>MIT</b><span>open licence</span><p>Julia 1.10.5 and Python 3.12, with pinned direct dependencies.</p></div>
+    </div>
+<pre class="cmd"><span class="c"># Try the full workflow on synthetic data</span>
+python -m pip install -r requirements.txt
+python src/generate_demo.py --output /tmp/analysis-demo
+python src/run_analysis.py /tmp/analysis-demo/trajectories.csv \
+  --config /tmp/analysis-demo/config.json --ties /tmp/analysis-demo/ties.csv \
+  --output /tmp/analysis-output
+python src/verify_analysis.py /tmp/analysis-output</pre>
+    <div class="cite">Cite the software: Aziz, U. <em>Sheep collective motion: empirical pipeline and agent-based model</em> [software]. GitHub. <a href="https://github.com/Umar2213/sheep-collective-abm">github.com/Umar2213/sheep-collective-abm</a>. MIT licence.</div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Sheep Motion Lab. Source code on <a href="https://github.com/Umar2213/sheep-collective-abm">GitHub</a>.</p>
+    <p>Computational results are not independent validation of animal behaviour, mechanism or causal influence. The recorded run uses public data from Jadhav et al. (2024), <em>Communications Biology</em> 7:1543, licensed CC BY 4.0. No restricted project data is published here.</p>
+  </div>
+</footer>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+"use strict";
+const PROD = {"prod":{"0.3":[[0.0,0.9903,0.0009],[0.025,0.9903,0.0008],[0.05,0.9902,0.0009],[0.075,0.99,0.0009],[0.1,0.9902,0.0008],[0.125,0.9899,0.001],[0.15,0.9895,0.0012],[0.175,0.9894,0.0009],[0.2,0.988,0.0015],[0.225,0.9872,0.0018],[0.25,0.9828,0.0042],[0.275,0.9751,0.0083],[0.3,0.9672,0.0111],[0.325,0.9471,0.0143],[0.35,0.9173,0.0202],[0.375,0.8617,0.0279],[0.4,0.7978,0.0354],[0.425,0.7147,0.052],[0.45,0.6029,0.0413]],"0.5":[[0.0,0.9738,0.0023],[0.025,0.9742,0.0019],[0.05,0.9736,0.0025],[0.075,0.9717,0.0019],[0.1,0.9722,0.0025],[0.125,0.9725,0.0023],[0.15,0.9722,0.0018],[0.175,0.9699,0.0016],[0.2,0.9674,0.0022],[0.225,0.9636,0.004],[0.25,0.9566,0.0097],[0.275,0.9428,0.011],[0.3,0.9269,0.0155],[0.325,0.898,0.0196],[0.35,0.8559,0.0224],[0.375,0.795,0.0357],[0.4,0.7383,0.0404],[0.425,0.675,0.0348],[0.45,0.5727,0.0391]],"0.7":[[0.0,0.9475,0.0033],[0.025,0.9482,0.0033],[0.05,0.948,0.0027],[0.075,0.9493,0.0036],[0.1,0.9469,0.0039],[0.125,0.946,0.004],[0.15,0.9451,0.0032],[0.175,0.9416,0.0052],[0.2,0.9366,0.0036],[0.225,0.9305,0.0069],[0.25,0.9191,0.0094],[0.275,0.904,0.0127],[0.3,0.8781,0.0206],[0.325,0.8408,0.0272],[0.35,0.8016,0.0288],[0.375,0.7464,0.0321],[0.4,0.6854,0.0403],[0.425,0.6239,0.0402],[0.45,0.5396,0.0427]]},"thr":[[0.3,0.3578,0.3543,0.3618],[0.5,0.3233,0.3176,0.3284],[0.7,0.2789,0.2732,0.2835]]};
+const DEMO = {
+  "schema_version": 1,
+  "kind": "blocked_trajectory_analysis",
+  "config": {
+    "data_kind": "observational",
+    "coordinate_mode": "metric",
+    "crs": "local_metres",
+    "min_speed": 0.3,
+    "max_speed": 8,
+    "max_gap": 1.5,
+    "sampling_interval_seconds": 1,
+    "max_accuracy": 10.0,
+    "displacement_sigma": 2.0,
+    "radius": 5,
+    "n_folds": 8,
+    "split_columns": [
+      "group_id",
+      "session_id"
+    ],
+    "uncertainty_columns": [
+      "group_id",
+      "session_id"
+    ],
+    "min_individual_train": 10,
+    "n_bootstrap": 2000,
+    "shuffle_seeds": [
+      11,
+      29,
+      47,
+      71,
+      97
+    ],
+    "seed": 42,
+    "ties_independent": true,
+    "common_shuffle_controls": true
+  },
+  "audit": {
+    "structural": {
+      "rows": 11942,
+      "groups": 1,
+      "bouts": 29,
+      "individuals": 14,
+      "tracks": 406,
+      "missing_identifiers": 0,
+      "duplicate_keys": 0,
+      "nonfinite_coordinates": 0,
+      "unparseable_timestamps": 0,
+      "timezone_missing_timestamps": 0,
+      "whitespace_identifiers": 0,
+      "single_individual_bouts": 0,
+      "nonpositive_time_steps": 0,
+      "median_sampling_interval_seconds": 1.0,
+      "min_sampling_interval_seconds": 1.0,
+      "max_sampling_interval_seconds": 1.0,
+      "min_track_observations": 5,
+      "median_track_observations": 26.0,
+      "max_track_observations": 111
+    },
+    "filters": {
+      "long_gaps": 0,
+      "poor_accuracy_fixes": 0,
+      "overspeed_intervals": 0,
+      "unusable_headings": 1300,
+      "accuracy_supplied": false
+    },
+    "warnings": [
+      "No accuracy_m supplied: GPS uncertainty was not quantified or removed.",
+      "No interpolation, resampling or smoothing. Speed and displacement thresholds were fixed before fitting.",
+      "Uncertainty intervals condition on fitted cross-validation predictions; they do not refit the full pipeline or correct multiple comparisons.",
+      "Declare reasonably independent uncertainty units before analysis; a small unit count gives weak interval estimates.",
+      "Network relabellings are negative controls, not a permutation significance test.",
+      "Prediction gains do not establish causality, novelty or parameter identifiability.",
+      "No free outgoing-influence parameter is estimated alongside unrestricted ties.",
+      "Neighbour coverage uses the recorded bout roster, not a known complete flock census. No usable neighbours can reflect missing or unusable observations, not social isolation."
+    ],
+    "data_kind": "observational",
+    "distinct_group_animal_ids": 14,
+    "excluded_transitions": {
+      "heading_or_target_missing": 2058,
+      "unequal_intervals": 0
+    },
+    "eligible_transitions": 9884,
+    "sampling_interval_seconds": 1,
+    "prediction_status_counts": {
+      "M0": {
+        "estimated": 9884
+      },
+      "M1": {
+        "estimated": 9884
+      },
+      "M2": {
+        "estimated": 9884
+      },
+      "M3": {
+        "estimated": 9884
+      },
+      "constant_turn": {
+        "not_fitted": 9884
+      },
+      "distance": {
+        "estimated": 9884
+      },
+      "persistence": {
+        "not_fitted": 9884
+      },
+      "shuffle_11": {
+        "estimated": 9884
+      },
+      "shuffle_29": {
+        "estimated": 9884
+      },
+      "shuffle_47": {
+        "estimated": 9884
+      },
+      "shuffle_71": {
+        "estimated": 9884
+      },
+      "shuffle_97": {
+        "estimated": 9884
+      },
+      "shuffle_common_11": {
+        "estimated": 9884
+      },
+      "shuffle_common_29": {
+        "estimated": 9884
+      },
+      "shuffle_common_47": {
+        "estimated": 9884
+      },
+      "shuffle_common_71": {
+        "estimated": 9884
+      },
+      "shuffle_common_97": {
+        "estimated": 9884
+      }
+    },
+    "neighbour_fallback_counts": {
+      "M0": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "M1": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "M2": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "M3": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "constant_turn": {
+        "not_applicable": 9884
+      },
+      "distance": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "persistence": {
+        "not_applicable": 9884
+      },
+      "shuffle_11": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "shuffle_29": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "shuffle_47": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "shuffle_71": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "shuffle_97": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "shuffle_common_11": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "shuffle_common_29": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "shuffle_common_47": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "shuffle_common_71": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      },
+      "shuffle_common_97": {
+        "none": 9881,
+        "no_usable_neighbours": 3
+      }
+    },
+    "coverage": {
+      "transitions_without_usable_neighbours": 3,
+      "transitions_with_nearby_unusable_headings": 1734,
+      "transitions_with_unrecorded_bout_members": 0
+    },
+    "uncertainty_units": 8
+  },
+  "scores": [
+    {
+      "model": "M0",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2072660034,
+      "mean_cosine_alignment": 0.9624116993
+    },
+    {
+      "model": "M0",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3747816643,
+      "mean_cosine_alignment": 0.8837827097
+    },
+    {
+      "model": "M0",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5476942542,
+      "mean_cosine_alignment": 0.7743508313
+    },
+    {
+      "model": "M0",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3332333298,
+      "mean_cosine_alignment": 0.9020922704
+    },
+    {
+      "model": "M0",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2460566203,
+      "mean_cosine_alignment": 0.9431700688
+    },
+    {
+      "model": "M0",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3233096517,
+      "mean_cosine_alignment": 0.9275395628
+    },
+    {
+      "model": "M0",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3403335006,
+      "mean_cosine_alignment": 0.8993298808
+    },
+    {
+      "model": "M0",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2769196881,
+      "mean_cosine_alignment": 0.9258248707
+    },
+    {
+      "model": "M1",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2106337357,
+      "mean_cosine_alignment": 0.9613146437
+    },
+    {
+      "model": "M1",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3719152994,
+      "mean_cosine_alignment": 0.8848623397
+    },
+    {
+      "model": "M1",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5495878304,
+      "mean_cosine_alignment": 0.7714066389
+    },
+    {
+      "model": "M1",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3305940337,
+      "mean_cosine_alignment": 0.9030751728
+    },
+    {
+      "model": "M1",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2478140557,
+      "mean_cosine_alignment": 0.9430243273
+    },
+    {
+      "model": "M1",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3194489355,
+      "mean_cosine_alignment": 0.929649715
+    },
+    {
+      "model": "M1",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3384245567,
+      "mean_cosine_alignment": 0.8994971486
+    },
+    {
+      "model": "M1",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2726372451,
+      "mean_cosine_alignment": 0.9275635241
+    },
+    {
+      "model": "M2",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2076963424,
+      "mean_cosine_alignment": 0.9623451657
+    },
+    {
+      "model": "M2",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3782314793,
+      "mean_cosine_alignment": 0.8818884961
+    },
+    {
+      "model": "M2",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5445985293,
+      "mean_cosine_alignment": 0.7772162076
+    },
+    {
+      "model": "M2",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3357857681,
+      "mean_cosine_alignment": 0.9010000019
+    },
+    {
+      "model": "M2",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2465973629,
+      "mean_cosine_alignment": 0.9431247138
+    },
+    {
+      "model": "M2",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3253564746,
+      "mean_cosine_alignment": 0.9270906408
+    },
+    {
+      "model": "M2",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3407388977,
+      "mean_cosine_alignment": 0.8990183815
+    },
+    {
+      "model": "M2",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2782539074,
+      "mean_cosine_alignment": 0.9254137183
+    },
+    {
+      "model": "M3",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2111310958,
+      "mean_cosine_alignment": 0.9612303004
+    },
+    {
+      "model": "M3",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3752264565,
+      "mean_cosine_alignment": 0.883449635
+    },
+    {
+      "model": "M3",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5451500226,
+      "mean_cosine_alignment": 0.7754337633
+    },
+    {
+      "model": "M3",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3317201924,
+      "mean_cosine_alignment": 0.9029610705
+    },
+    {
+      "model": "M3",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.248763163,
+      "mean_cosine_alignment": 0.9426802635
+    },
+    {
+      "model": "M3",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3219301084,
+      "mean_cosine_alignment": 0.9290348261
+    },
+    {
+      "model": "M3",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3401259378,
+      "mean_cosine_alignment": 0.8986777829
+    },
+    {
+      "model": "M3",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2732649465,
+      "mean_cosine_alignment": 0.9275538695
+    },
+    {
+      "model": "constant_turn",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2967013725,
+      "mean_cosine_alignment": 0.9250690502
+    },
+    {
+      "model": "constant_turn",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.4365701976,
+      "mean_cosine_alignment": 0.8434981495
+    },
+    {
+      "model": "constant_turn",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.6265572377,
+      "mean_cosine_alignment": 0.7168173176
+    },
+    {
+      "model": "constant_turn",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.4640391153,
+      "mean_cosine_alignment": 0.8250561172
+    },
+    {
+      "model": "constant_turn",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.3636519376,
+      "mean_cosine_alignment": 0.8835691391
+    },
+    {
+      "model": "constant_turn",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3851896889,
+      "mean_cosine_alignment": 0.8909566386
+    },
+    {
+      "model": "constant_turn",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.5067909716,
+      "mean_cosine_alignment": 0.7941993781
+    },
+    {
+      "model": "constant_turn",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.4748249048,
+      "mean_cosine_alignment": 0.8126577089
+    },
+    {
+      "model": "distance",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2068793948,
+      "mean_cosine_alignment": 0.9626243868
+    },
+    {
+      "model": "distance",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3751281033,
+      "mean_cosine_alignment": 0.8836245906
+    },
+    {
+      "model": "distance",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5475309202,
+      "mean_cosine_alignment": 0.774569681
+    },
+    {
+      "model": "distance",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3336508403,
+      "mean_cosine_alignment": 0.9019171883
+    },
+    {
+      "model": "distance",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2458674109,
+      "mean_cosine_alignment": 0.9432610138
+    },
+    {
+      "model": "distance",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3244057094,
+      "mean_cosine_alignment": 0.9269171904
+    },
+    {
+      "model": "distance",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3389919464,
+      "mean_cosine_alignment": 0.9000238403
+    },
+    {
+      "model": "distance",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2759091563,
+      "mean_cosine_alignment": 0.9262582363
+    },
+    {
+      "model": "persistence",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2281898828,
+      "mean_cosine_alignment": 0.9528005945
+    },
+    {
+      "model": "persistence",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3893215163,
+      "mean_cosine_alignment": 0.8738662731
+    },
+    {
+      "model": "persistence",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5620725951,
+      "mean_cosine_alignment": 0.7574757409
+    },
+    {
+      "model": "persistence",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.370811297,
+      "mean_cosine_alignment": 0.8832436517
+    },
+    {
+      "model": "persistence",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2789218922,
+      "mean_cosine_alignment": 0.9294233309
+    },
+    {
+      "model": "persistence",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3460163352,
+      "mean_cosine_alignment": 0.9145319788
+    },
+    {
+      "model": "persistence",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3776495969,
+      "mean_cosine_alignment": 0.8759003507
+    },
+    {
+      "model": "persistence",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.320793384,
+      "mean_cosine_alignment": 0.9033706351
+    },
+    {
+      "model": "shuffle_11",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2115421478,
+      "mean_cosine_alignment": 0.9612451143
+    },
+    {
+      "model": "shuffle_11",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3745559401,
+      "mean_cosine_alignment": 0.8833037627
+    },
+    {
+      "model": "shuffle_11",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5509500688,
+      "mean_cosine_alignment": 0.7698498856
+    },
+    {
+      "model": "shuffle_11",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3349096126,
+      "mean_cosine_alignment": 0.9015084321
+    },
+    {
+      "model": "shuffle_11",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2492620339,
+      "mean_cosine_alignment": 0.9423155717
+    },
+    {
+      "model": "shuffle_11",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3218053779,
+      "mean_cosine_alignment": 0.9284323025
+    },
+    {
+      "model": "shuffle_11",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3423923811,
+      "mean_cosine_alignment": 0.8975847834
+    },
+    {
+      "model": "shuffle_11",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2747467227,
+      "mean_cosine_alignment": 0.9265246505
+    },
+    {
+      "model": "shuffle_29",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2073763698,
+      "mean_cosine_alignment": 0.9623928993
+    },
+    {
+      "model": "shuffle_29",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3735768603,
+      "mean_cosine_alignment": 0.8839971303
+    },
+    {
+      "model": "shuffle_29",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5537099823,
+      "mean_cosine_alignment": 0.7688340585
+    },
+    {
+      "model": "shuffle_29",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3339623305,
+      "mean_cosine_alignment": 0.9015888309
+    },
+    {
+      "model": "shuffle_29",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2481659748,
+      "mean_cosine_alignment": 0.9424622532
+    },
+    {
+      "model": "shuffle_29",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3219265455,
+      "mean_cosine_alignment": 0.9283441815
+    },
+    {
+      "model": "shuffle_29",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.343343775,
+      "mean_cosine_alignment": 0.8971118301
+    },
+    {
+      "model": "shuffle_29",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2749789626,
+      "mean_cosine_alignment": 0.9265875933
+    },
+    {
+      "model": "shuffle_47",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2090479313,
+      "mean_cosine_alignment": 0.9616861003
+    },
+    {
+      "model": "shuffle_47",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3722973785,
+      "mean_cosine_alignment": 0.8849616221
+    },
+    {
+      "model": "shuffle_47",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5493288196,
+      "mean_cosine_alignment": 0.7718793545
+    },
+    {
+      "model": "shuffle_47",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3309714066,
+      "mean_cosine_alignment": 0.9027882617
+    },
+    {
+      "model": "shuffle_47",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2474805279,
+      "mean_cosine_alignment": 0.9429252448
+    },
+    {
+      "model": "shuffle_47",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3214473576,
+      "mean_cosine_alignment": 0.9286325592
+    },
+    {
+      "model": "shuffle_47",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3401143794,
+      "mean_cosine_alignment": 0.8986040293
+    },
+    {
+      "model": "shuffle_47",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2736443953,
+      "mean_cosine_alignment": 0.9271717917
+    },
+    {
+      "model": "shuffle_71",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2105592076,
+      "mean_cosine_alignment": 0.9614423874
+    },
+    {
+      "model": "shuffle_71",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3723286073,
+      "mean_cosine_alignment": 0.8854128499
+    },
+    {
+      "model": "shuffle_71",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5466277189,
+      "mean_cosine_alignment": 0.7730517998
+    },
+    {
+      "model": "shuffle_71",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3320373399,
+      "mean_cosine_alignment": 0.9026131152
+    },
+    {
+      "model": "shuffle_71",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.248512358,
+      "mean_cosine_alignment": 0.9425640418
+    },
+    {
+      "model": "shuffle_71",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3145734258,
+      "mean_cosine_alignment": 0.931262112
+    },
+    {
+      "model": "shuffle_71",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3408285718,
+      "mean_cosine_alignment": 0.898117035
+    },
+    {
+      "model": "shuffle_71",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2732563513,
+      "mean_cosine_alignment": 0.9274002923
+    },
+    {
+      "model": "shuffle_97",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2066609713,
+      "mean_cosine_alignment": 0.9626268397
+    },
+    {
+      "model": "shuffle_97",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3736093731,
+      "mean_cosine_alignment": 0.8841800022
+    },
+    {
+      "model": "shuffle_97",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5535513488,
+      "mean_cosine_alignment": 0.7701769998
+    },
+    {
+      "model": "shuffle_97",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.333307377,
+      "mean_cosine_alignment": 0.9018515792
+    },
+    {
+      "model": "shuffle_97",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2486667973,
+      "mean_cosine_alignment": 0.942237556
+    },
+    {
+      "model": "shuffle_97",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3232841217,
+      "mean_cosine_alignment": 0.9277519218
+    },
+    {
+      "model": "shuffle_97",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3440632499,
+      "mean_cosine_alignment": 0.8971031881
+    },
+    {
+      "model": "shuffle_97",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2742668633,
+      "mean_cosine_alignment": 0.926923832
+    },
+    {
+      "model": "shuffle_common_11",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2086687218,
+      "mean_cosine_alignment": 0.9621390234
+    },
+    {
+      "model": "shuffle_common_11",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3745226783,
+      "mean_cosine_alignment": 0.8838698662
+    },
+    {
+      "model": "shuffle_common_11",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5502972452,
+      "mean_cosine_alignment": 0.7717382109
+    },
+    {
+      "model": "shuffle_common_11",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3364894433,
+      "mean_cosine_alignment": 0.9007604219
+    },
+    {
+      "model": "shuffle_common_11",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2477389545,
+      "mean_cosine_alignment": 0.9423948382
+    },
+    {
+      "model": "shuffle_common_11",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3255823317,
+      "mean_cosine_alignment": 0.9263550686
+    },
+    {
+      "model": "shuffle_common_11",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3425265675,
+      "mean_cosine_alignment": 0.8982424668
+    },
+    {
+      "model": "shuffle_common_11",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2787293783,
+      "mean_cosine_alignment": 0.9250519923
+    },
+    {
+      "model": "shuffle_common_29",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2076874562,
+      "mean_cosine_alignment": 0.9621762469
+    },
+    {
+      "model": "shuffle_common_29",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3767990953,
+      "mean_cosine_alignment": 0.8822688681
+    },
+    {
+      "model": "shuffle_common_29",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5492277647,
+      "mean_cosine_alignment": 0.7731321608
+    },
+    {
+      "model": "shuffle_common_29",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3368135949,
+      "mean_cosine_alignment": 0.9004183718
+    },
+    {
+      "model": "shuffle_common_29",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2461757288,
+      "mean_cosine_alignment": 0.9432578219
+    },
+    {
+      "model": "shuffle_common_29",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3252361503,
+      "mean_cosine_alignment": 0.926759091
+    },
+    {
+      "model": "shuffle_common_29",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3436531647,
+      "mean_cosine_alignment": 0.8976227207
+    },
+    {
+      "model": "shuffle_common_29",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2787944649,
+      "mean_cosine_alignment": 0.9250348775
+    },
+    {
+      "model": "shuffle_common_47",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2059329154,
+      "mean_cosine_alignment": 0.9627583782
+    },
+    {
+      "model": "shuffle_common_47",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3735945906,
+      "mean_cosine_alignment": 0.8847994941
+    },
+    {
+      "model": "shuffle_common_47",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5490244213,
+      "mean_cosine_alignment": 0.773103504
+    },
+    {
+      "model": "shuffle_common_47",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3332469786,
+      "mean_cosine_alignment": 0.9018075184
+    },
+    {
+      "model": "shuffle_common_47",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2459115404,
+      "mean_cosine_alignment": 0.9431465989
+    },
+    {
+      "model": "shuffle_common_47",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3240669416,
+      "mean_cosine_alignment": 0.9273518355
+    },
+    {
+      "model": "shuffle_common_47",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3409515712,
+      "mean_cosine_alignment": 0.8989724615
+    },
+    {
+      "model": "shuffle_common_47",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2774983582,
+      "mean_cosine_alignment": 0.925530374
+    },
+    {
+      "model": "shuffle_common_71",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.20768398,
+      "mean_cosine_alignment": 0.9621451011
+    },
+    {
+      "model": "shuffle_common_71",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3766957182,
+      "mean_cosine_alignment": 0.8827512761
+    },
+    {
+      "model": "shuffle_common_71",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5458189466,
+      "mean_cosine_alignment": 0.7749364712
+    },
+    {
+      "model": "shuffle_common_71",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3351518151,
+      "mean_cosine_alignment": 0.9010562566
+    },
+    {
+      "model": "shuffle_common_71",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.247860906,
+      "mean_cosine_alignment": 0.9423587793
+    },
+    {
+      "model": "shuffle_common_71",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3182668399,
+      "mean_cosine_alignment": 0.9291740865
+    },
+    {
+      "model": "shuffle_common_71",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3448018674,
+      "mean_cosine_alignment": 0.8965817906
+    },
+    {
+      "model": "shuffle_common_71",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2795780776,
+      "mean_cosine_alignment": 0.9246516163
+    },
+    {
+      "model": "shuffle_common_97",
+      "group_id": "flock1",
+      "session_id": "trial01",
+      "n_observations": 378,
+      "mean_absolute_error": 0.2063777723,
+      "mean_cosine_alignment": 0.9624482877
+    },
+    {
+      "model": "shuffle_common_97",
+      "group_id": "flock1",
+      "session_id": "trial02",
+      "n_observations": 1566,
+      "mean_absolute_error": 0.3750281739,
+      "mean_cosine_alignment": 0.8837502702
+    },
+    {
+      "model": "shuffle_common_97",
+      "group_id": "flock1",
+      "session_id": "trial04",
+      "n_observations": 363,
+      "mean_absolute_error": 0.5491005274,
+      "mean_cosine_alignment": 0.7740577729
+    },
+    {
+      "model": "shuffle_common_97",
+      "group_id": "flock1",
+      "session_id": "trial05",
+      "n_observations": 1602,
+      "mean_absolute_error": 0.3353094155,
+      "mean_cosine_alignment": 0.9012208863
+    },
+    {
+      "model": "shuffle_common_97",
+      "group_id": "flock1",
+      "session_id": "trial06",
+      "n_observations": 1064,
+      "mean_absolute_error": 0.2481072352,
+      "mean_cosine_alignment": 0.9426377863
+    },
+    {
+      "model": "shuffle_common_97",
+      "group_id": "flock1",
+      "session_id": "trial07",
+      "n_observations": 84,
+      "mean_absolute_error": 0.3253336624,
+      "mean_cosine_alignment": 0.9266100277
+    },
+    {
+      "model": "shuffle_common_97",
+      "group_id": "flock1",
+      "session_id": "trial10",
+      "n_observations": 2804,
+      "mean_absolute_error": 0.3439513911,
+      "mean_cosine_alignment": 0.8976812256
+    },
+    {
+      "model": "shuffle_common_97",
+      "group_id": "flock1",
+      "session_id": "trial11",
+      "n_observations": 2023,
+      "mean_absolute_error": 0.2792391362,
+      "mean_cosine_alignment": 0.9244517452
+    }
+  ],
+  "comparisons": [
+    {
+      "reference": "M0",
+      "alternative": "M1",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0010673775,
+      "ci95_low": -0.0028767566,
+      "ci95_high": 0.0008952518,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "persistence",
+      "alternative": "M0",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0280227234,
+      "ci95_low": -0.0351242439,
+      "ci95_high": -0.0204475824,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "constant_turn",
+      "alternative": "M0",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.1130913392,
+      "ci95_low": -0.1449747658,
+      "ci95_high": -0.0829843674,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "distance",
+      "alternative": "M0",
+      "n_blocks": 8,
+      "mean_delta_mae": 0.0001539039,
+      "ci95_low": -0.0003305126,
+      "ci95_high": 0.0006380452,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "M0",
+      "alternative": "M2",
+      "n_blocks": 8,
+      "mean_delta_mae": 0.0009580062,
+      "ci95_low": -0.0004499319,
+      "ci95_high": 0.0021006231,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "distance",
+      "alternative": "M2",
+      "n_blocks": 8,
+      "mean_delta_mae": 0.00111191,
+      "ci95_low": -0.0002030628,
+      "ci95_high": 0.0021367778,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "M0",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0002853487,
+      "ci95_low": -0.0018649754,
+      "ci95_high": 0.0014101517,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "M1",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": 0.0007820289,
+      "ci95_low": -0.0009125811,
+      "ci95_high": 0.0019952723,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "M2",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0012433548,
+      "ci95_low": -0.0031292646,
+      "ci95_high": 0.0008085503,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "persistence",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0283080721,
+      "ci95_low": -0.0362970052,
+      "ci95_high": -0.0205987705,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "constant_turn",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.1133766879,
+      "ci95_low": -0.1458364275,
+      "ci95_high": -0.0829703747,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "distance",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0001314448,
+      "ci95_low": -0.0017103145,
+      "ci95_high": 0.0016283097,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_11",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0016065452,
+      "ci95_low": -0.003136326,
+      "ci95_high": -0.0004502651,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_29",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0012161097,
+      "ci95_low": -0.0038267997,
+      "ci95_high": 0.0009972412,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_47",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": 0.0003724659,
+      "ci95_low": -0.0011518574,
+      "ci95_high": 0.0015553677,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_71",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": 0.0010735428,
+      "ci95_low": -0.0004328158,
+      "ci95_high": 0.0030409293,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_97",
+      "alternative": "M3",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0012622724,
+      "ci95_low": -0.0038805578,
+      "ci95_high": 0.0010994715,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_common_11",
+      "alternative": "M2",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0009120699,
+      "ci95_low": -0.0026476667,
+      "ci95_high": 0.0006883989,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_common_29",
+      "alternative": "M2",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0008910823,
+      "ci95_low": -0.0022703942,
+      "ci95_high": 0.0002051706,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_common_47",
+      "alternative": "M2",
+      "n_blocks": 8,
+      "mean_delta_mae": 0.0008789305,
+      "ci95_low": -0.0009442377,
+      "ci95_high": 0.0023910581,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_common_71",
+      "alternative": "M2",
+      "n_blocks": 8,
+      "mean_delta_mae": 0.0001750763,
+      "ci95_low": -0.0016438705,
+      "ci95_high": 0.0023815572,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    },
+    {
+      "reference": "shuffle_common_97",
+      "alternative": "M2",
+      "n_blocks": 8,
+      "mean_delta_mae": -0.0006485691,
+      "ci95_low": -0.0022252025,
+      "ci95_high": 0.0009037606,
+      "n_bootstrap": 2000,
+      "seed": 42,
+      "status": "conditional_paired_cluster_bootstrap"
+    }
+  ],
+  "parameter_status_counts": {
+    "estimated": 904
+  },
+  "input_sha256": {
+    "trajectories": "572777f60da6e2bff05a9502f3a82d6b8af26a37c4ef62e165c21b7f4228eb3a",
+    "config": "8ab63e28071b218a54123f53c36e489ee0cfe953861d80ea437209ba1e0f2f49",
+    "ties": "98a6240df3cab9f4e89beac626d936f47fc46c105fa5a66a3d17e28cdbe5f5b1"
+  },
+  "notice": "Computational results only. Scientific interpretation requires independent data and a justified study design."
+};
+const REAL = {"0.5":{"rows":[["Neighbour alignment (M0) vs keep heading",-1.726,-2.118,-1.33],["Individual responsiveness (M1 vs M0)",-0.0,-0.064,0.071],["Ties instead of uniform (M2 vs M0)",0.039,-0.009,0.087],["Ties added to M1 (M3 vs M1)",0.036,-0.034,0.099],["Responsiveness added to M2 (M3 vs M2)",-0.002,-0.062,0.068]],"m0":16.05,"pers":17.78,"n":20803},"1":{"rows":[["Neighbour alignment (M0) vs keep heading",-1.606,-2.012,-1.172],["Individual responsiveness (M1 vs M0)",-0.061,-0.165,0.051],["Ties instead of uniform (M2 vs M0)",0.055,-0.026,0.12],["Ties added to M1 (M3 vs M1)",0.045,-0.052,0.114],["Responsiveness added to M2 (M3 vs M2)",-0.071,-0.179,0.046]],"m0":18.98,"pers":20.58,"n":9884},"2":{"rows":[["Neighbour alignment (M0) vs keep heading",-1.037,-1.614,-0.425],["Individual responsiveness (M1 vs M0)",-0.264,-0.501,-0.114],["Ties instead of uniform (M2 vs M0)",0.006,-0.039,0.059],["Ties added to M1 (M3 vs M1)",0.014,-0.079,0.106],["Responsiveness added to M2 (M3 vs M2)",-0.256,-0.545,-0.075]],"m0":28.06,"pers":29.1,"n":4482}};
+const DEMO_HASH = '1fbef108d2b6cf1b806a927b61a30b3432a6779752119a455362bb2687ca07f3';
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- cyclic heading colour (twilight-like) ---------- */
+const WHEEL = ['#E2D9E2','#9EBBC9','#6A89C3','#5D4FA9','#3B1E5A','#2F1436','#6E1F3E','#A33B3A','#C9765A','#D9B8A6','#E2D9E2'];
+function hexToRgb(h){return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16));}
+const WHEEL_RGB = WHEEL.map(hexToRgb);
+function headingColour(th){
+  let u = ((th % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI) / (2*Math.PI) * (WHEEL.length-1);
+  const i = Math.floor(u), f = u - i, a = WHEEL_RGB[i], b = WHEEL_RGB[Math.min(i+1, WHEEL.length-1)];
+  return `rgb(${a.map((v,k)=>Math.round(v+(b[k]-v)*f)).join(',')})`;
+}
+function respColour(r){ // green (independent) -> blue (follower)
+  const a=[63,125,74], b=[31,95,191]; return `rgb(${a.map((v,k)=>Math.round(v+(b[k]-v)*r)).join(',')})`;
+}
+
+/* ---------- random helpers ---------- */
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function gamma(k){ if(k<1){return gamma(k+1)*Math.pow(Math.random(),1/k);} const d=k-1/3,c=1/Math.sqrt(9*d); for(;;){let x,v;do{x=randn();v=1+c*x;}while(v<=0);v=v*v*v;const u=Math.random();if(u<1-0.0331*x*x*x*x)return d*v;if(Math.log(u)<0.5*x*x+d*(1-v+Math.log(v)))return d*v;} }
+function betaDraw(mu,s){ if(s<=0) return mu; const k=mu*(1-mu)/(s*s)-1; if(k<=0) return Math.random()<mu?1:0; const x=gamma(mu*k), y=gamma((1-mu)*k); return x/(x+y); }
+
+/* ---------- flock simulation ---------- */
+const sim = (() => {
+  const canvas = $('flock'), ctx = canvas.getContext('2d');
+  const N = 200, MU = 0.7, R = 1, SPEED = 0.03, STEPS = 3;
+  let L = 20, W = 1, H = 1, scale = 1, sigma = 0.10, eta = 0.5, colourBy = 'heading', running = !reduceMotion;
+  let x = new Float64Array(N), y = new Float64Array(N), th = new Float64Array(N), r = new Float64Array(N), nth = new Float64Array(N);
+  let phiAvg = null;
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio||1, 2), rect = canvas.getBoundingClientRect();
+    W = rect.width; H = rect.height; canvas.width = W*dpr; canvas.height = H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    scale = Math.max(W, H) / L; // square world stretched to cover; keep density
+  }
+  function drawTraits(){ for(let i=0;i<N;i++) r[i]=Math.min(1,Math.max(0,betaDraw(MU,sigma))); }
+  function init(){ for(let i=0;i<N;i++){x[i]=Math.random()*L;y[i]=Math.random()*L;th[i]=(Math.random()*2-1)*Math.PI;} drawTraits(); phiAvg=null; }
+  function step(){
+    const cells = 20, cs = L/cells, grid = Array.from({length:cells*cells},()=>[]);
+    for(let i=0;i<N;i++){ grid[Math.floor(x[i]/cs)%cells*cells + Math.floor(y[i]/cs)%cells].push(i); }
+    for(let i=0;i<N;i++){
+      const cx=Math.floor(x[i]/cs), cy=Math.floor(y[i]/cs); let sx=0, sy=0, n=0;
+      for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+        const g=grid[((cx+dx+cells)%cells)*cells+((cy+dy+cells)%cells)];
+        for(const j of g){ if(j===i) continue; let ddx=x[j]-x[i], ddy=y[j]-y[i]; if(ddx>L/2)ddx-=L; if(ddx<-L/2)ddx+=L; if(ddy>L/2)ddy-=L; if(ddy<-L/2)ddy+=L; if(ddx*ddx+ddy*ddy<=R*R){sx+=Math.cos(th[j]);sy+=Math.sin(th[j]);n++;} }
+      }
+      let ox=Math.cos(th[i]), oy=Math.sin(th[i]);
+      if(n>0){ const m=Math.hypot(sx,sy); if(m>1e-9){ sx/=m*1; sy/=m; const vx=sx, vy=sy; // unit mean neighbour heading
+          const dxv=(1-r[i])*ox + r[i]*vx, dyv=(1-r[i])*oy + r[i]*vy; if(Math.hypot(dxv,dyv)>1e-9){ox=dxv;oy=dyv;} } }
+      nth[i] = Math.atan2(oy,ox) + (Math.random()-0.5)*eta;
+    }
+    for(let i=0;i<N;i++){ th[i]=nth[i]; x[i]=(x[i]+SPEED*Math.cos(th[i])+L)%L; y[i]=(y[i]+SPEED*Math.sin(th[i])+L)%L; }
+  }
+  function phi(){ let sx=0,sy=0; for(let i=0;i<N;i++){sx+=Math.cos(th[i]);sy+=Math.sin(th[i]);} return Math.hypot(sx,sy)/N; }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const s = Math.max(5, Math.min(9, W/150));
+    for(let i=0;i<N;i++){
+      const px = x[i]*scale - (L*scale-W)/2, py = y[i]*scale - (L*scale-H)/2;
+      if(px<-10||py<-10||px>W+10||py>H+10) continue;
+      const c=Math.cos(th[i]), sn=Math.sin(th[i]);
+      ctx.fillStyle = colourBy==='heading' ? headingColour(th[i]) : respColour(r[i]);
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(px + c*s*1.4, py + sn*s*1.4);
+      ctx.lineTo(px - c*s*0.9 - sn*s*0.7, py - sn*s*0.9 + c*s*0.7);
+      ctx.lineTo(px - c*s*0.45, py - sn*s*0.45);
+      ctx.lineTo(px - c*s*0.9 + sn*s*0.7, py - sn*s*0.9 - c*s*0.7);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  let frame = 0;
+  function loop(){
+    if(running){ for(let k=0;k<STEPS;k++) step(); const p=phi(); phiAvg = phiAvg==null?p:phiAvg*0.97+p*0.03; if(++frame%6===0) $('phiv').textContent = phiAvg.toFixed(2); }
+    draw(); requestAnimationFrame(loop);
+  }
+  // warm up so the first frame already shows structure
+  function warm(n){ for(let k=0;k<n;k++) step(); phiAvg=phi(); $('phiv').textContent=phiAvg.toFixed(2); }
+  return {
+    start(){ resize(); init(); warm(1500); window.addEventListener('resize', resize); requestAnimationFrame(loop); },
+    setSigma(v){ sigma=v; drawTraits(); }, setEta(v){ eta=v; },
+    setColour(c){ colourBy=c; }, toggle(){ running=!running; return running; }, isRunning(){return running;},
+    warm
+  };
+})();
+sim.start();
+$('play').textContent = sim.isRunning() ? 'Pause' : 'Play';
+$('sig').addEventListener('input', e => { const v=+e.target.value; $('sigv').textContent=v.toFixed(2); sim.setSigma(v); if(!sim.isRunning()) sim.warm(600); });
+$('eta').addEventListener('input', e => { const v=+e.target.value; $('etav').textContent=v.toFixed(2); sim.setEta(v); if(!sim.isRunning()) sim.warm(600); });
+document.querySelectorAll('[data-col]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-col]').forEach(x=>x.setAttribute('aria-pressed', String(x===b))); sim.setColour(b.dataset.col); }));
+$('play').addEventListener('click', () => { $('play').textContent = sim.toggle() ? 'Pause' : 'Play'; });
+
+/* ---------- identifiability demo ---------- */
+function updScale(){ const c=+$('cscale').value, A=1*c, q=1/c, P=A*q, mx=4;
+  $('cval').textContent=c.toFixed(2); $('bA').style.width=(A/mx*100)+'%'; $('bQ').style.width=(q/mx*100)+'%'; $('bP').style.width=(P/mx*100)+'%';
+  $('vA').textContent=A.toFixed(2); $('vQ').textContent=q.toFixed(2); $('vP').textContent=P.toFixed(2); }
+$('cscale').addEventListener('input', updScale); updScale();
+
+/* ---------- SVG helpers ---------- */
+const NS='http://www.w3.org/2000/svg';
+function el(tag, attrs, parent){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k, attrs[k]); if(parent) parent.appendChild(e); return e; }
+const tip = $('tip');
+function showTip(evt, html){ tip.innerHTML=html; tip.style.opacity=1; const x=evt.clientX+14, y=evt.clientY+14; tip.style.left=Math.min(x, window.innerWidth-tip.offsetWidth-8)+'px'; tip.style.top=y+'px'; }
+function hideTip(){ tip.style.opacity=0; }
+
+/* ---------- production chart ---------- */
+(function(){
+  const svg=$('prodChart'), W=640, H=380, m={l:52,r:16,t:16,b:44};
+  const xs=v=>m.l+(v/0.45)*(W-m.l-m.r), ys=v=>m.t+(1-(v-0.5)/0.5)*(H-m.t-m.b);
+  const COL={'0.3':'#1F5FBF','0.5':'#C2413A','0.7':'#3F7D4A'};
+  for(let v=0.5;v<=1.0001;v+=0.1){ el('line',{x1:m.l,x2:W-m.r,y1:ys(v),y2:ys(v),class:'ax'},svg); el('text',{x:m.l-8,y:ys(v)+4,'text-anchor':'end'},svg).textContent=v.toFixed(1); }
+  for(let v=0;v<=0.45001;v+=0.05){ el('text',{x:xs(v),y:H-m.b+20,'text-anchor':'middle'},svg).textContent=v.toFixed(2).replace(/0$/,''); }
+  el('text',{x:(W+m.l)/2,y:H-4,'text-anchor':'middle'},svg).textContent='Individual difference σ (standard deviation of responsiveness)';
+  const yl=el('text',{x:14,y:(H-m.b+m.t)/2,'text-anchor':'middle',transform:`rotate(-90 14 ${(H-m.b+m.t)/2})`},svg); yl.textContent='Heading order φ';
+  el('line',{x1:m.l,x2:W-m.r,y1:ys(0.9),y2:ys(0.9),stroke:'#17242A','stroke-dasharray':'4 4','stroke-width':1},svg);
+  el('text',{x:W-m.r,y:ys(0.9)-6,'text-anchor':'end'},svg).textContent='φ = 0.90';
+  const leg=$('prodLegend');
+  Object.keys(PROD.prod).sort().forEach(k=>{
+    const rows=PROD.prod[k], c=COL[k]||'#555';
+    const up=rows.map(r=>`${xs(r[0])},${ys(Math.min(1,r[1]+r[2]))}`), dn=rows.slice().reverse().map(r=>`${xs(r[0])},${ys(r[1]-r[2])}`);
+    el('polygon',{points:up.concat(dn).join(' '),fill:c,opacity:.12},svg);
+    el('polyline',{points:rows.map(r=>`${xs(r[0])},${ys(r[1])}`).join(' '),fill:'none',stroke:c,'stroke-width':2.4,'stroke-linejoin':'round'},svg);
+    rows.forEach(r=>{ const d=el('circle',{cx:xs(r[0]),cy:ys(r[1]),r:3.4,fill:c,tabindex:0},svg);
+      const h=`Noise η ${k}<br>σ ${r[0].toFixed(3)} · φ ${r[1].toFixed(3)}<br>SD across 20 runs ${r[2].toFixed(3)}`;
+      d.addEventListener('mousemove',e=>showTip(e,h)); d.addEventListener('mouseleave',hideTip);
+      d.addEventListener('focus',()=>{const b=d.getBoundingClientRect();showTip({clientX:b.x,clientY:b.y},h);}); d.addEventListener('blur',hideTip); });
+    leg.insertAdjacentHTML('beforeend',`<span><i style="background:${c}"></i>Noise η = ${k}</span>`);
+  });
+  PROD.thr.forEach(t=>{ const c=COL[String(t[0])]; el('circle',{cx:xs(t[1]),cy:ys(0.9),r:6,fill:'#fff',stroke:c,'stroke-width':2.4},svg);
+    $('thrBody').insertAdjacentHTML('beforeend',`<tr><td><span style="color:${c};font-weight:800">●</span> ${t[0]}</td><td>${t[1].toFixed(3)}</td><td>${t[2].toFixed(3)} – ${t[3].toFixed(3)}</td></tr>`); });
+})();
+
+/* ---------- recovery chart ---------- */
+const REC=[
+  {s:'Exact positions',rho:0.98,bias:0.005,rmse:0.028,g:'base'},
+  {s:'5 cm error',rho:0.79,bias:0.28,rmse:0.32,g:'err'},
+  {s:'10 cm error',rho:0.60,bias:0.38,rmse:0.43,g:'err'},
+  {s:'25 cm error',rho:0.06,bias:0.41,rmse:0.48,g:'err'},
+  {s:'10% missing fixes',rho:0.81,bias:-0.08,rmse:0.17,g:'oth'},
+  {s:'Every 2nd step',rho:0.97,bias:0.17,rmse:0.18,g:'oth'},
+  {s:'Uniform kernel',rho:0.87,bias:-0.07,rmse:0.15,g:'oth'}];
+const RECMETA={rho:{lab:'Rank agreement with truth (Spearman, 1 is perfect)',min:0,max:1},bias:{lab:'Bias in fitted responsiveness (0 is unbiased)',min:-0.1,max:0.45},rmse:{lab:'Root mean square error (0 is perfect)',min:0,max:0.5}};
+function drawRec(metric){
+  const svg=$('recChart'); svg.innerHTML=''; const W=640,H=330,m={l:150,r:56,t:10,b:40}, meta=RECMETA[metric];
+  const bh=(H-m.t-m.b)/REC.length, xs=v=>m.l+(v-meta.min)/(meta.max-meta.min)*(W-m.l-m.r);
+  const COL={base:'#3F7D4A',err:'#C2413A',oth:'#1F5FBF'};
+  for(let i=0;i<=5;i++){ const v=meta.min+(meta.max-meta.min)*i/5; el('line',{x1:xs(v),x2:xs(v),y1:m.t,y2:H-m.b,class:'ax'},svg); el('text',{x:xs(v),y:H-m.b+18,'text-anchor':'middle'},svg).textContent=(+v.toFixed(2)).toString(); }
+  el('text',{x:(W+m.l)/2,y:H-4,'text-anchor':'middle'},svg).textContent=meta.lab;
+  REC.forEach((d,i)=>{ const y=m.t+i*bh+bh*0.18, h=bh*0.64, v=d[metric], x0=xs(Math.max(meta.min,0)), x1=xs(v);
+    el('text',{x:m.l-10,y:y+h/2+4,'text-anchor':'end',style:'fill:#17242A'},svg).textContent=d.s;
+    const rct=el('rect',{x:Math.min(x0,x1),y,width:Math.max(1.5,Math.abs(x1-x0)),height:h,rx:4,fill:COL[d.g]},svg);
+    el('text',{x:Math.max(x0,x1)+6,y:y+h/2+4,style:'fill:#17242A;font-weight:600'},svg).textContent=(v>0&&metric==='bias'?'+':'')+v.toFixed(2);
+    rct.addEventListener('mousemove',e=>showTip(e,`${d.s}<br>Spearman ${d.rho.toFixed(2)} · bias ${d.bias>0?'+':''}${d.bias.toFixed(3)} · RMSE ${d.rmse.toFixed(3)}`)); rct.addEventListener('mouseleave',hideTip); });
+  if(meta.min<0) el('line',{x1:xs(0),x2:xs(0),y1:m.t,y2:H-m.b,stroke:'#17242A'},svg);
+}
+document.querySelectorAll('[data-rec]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-rec]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));drawRec(b.dataset.rec);}));
+drawRec('rho');
+
+/* ---------- real sheep contrasts ---------- */
+function drawReal(iv){
+  const d=REAL[iv], svg=$('realChart'); svg.innerHTML=''; const W=640,H=300,m={l:250,r:60,t:24,b:40};
+  const vals=d.rows.flatMap(r=>[r[1],r[2],r[3]]); let lo=Math.min(-2.2,...vals), hi=Math.max(0.6,...vals);
+  const xs=v=>m.l+(v-lo)/(hi-lo)*(W-m.l-m.r), rh=(H-m.t-m.b)/d.rows.length;
+  for(let v=Math.ceil(lo*2)/2; v<=hi+1e-9; v+=0.5){ el('line',{x1:xs(v),x2:xs(v),y1:m.t,y2:H-m.b,class:'ax'},svg); el('text',{x:xs(v),y:H-m.b+18,'text-anchor':'middle'},svg).textContent=v.toFixed(1); }
+  el('line',{x1:xs(0),x2:xs(0),y1:m.t-6,y2:H-m.b,stroke:'#17242A','stroke-width':1.2},svg);
+  el('text',{x:xs(0)-8,y:m.t-10,'text-anchor':'end',style:'fill:#3F7D4A;font-weight:600'},svg).textContent='richer model better';
+  el('text',{x:xs(0)+8,y:m.t-10,'text-anchor':'start',style:'fill:#C2413A;font-weight:600'},svg).textContent='worse';
+  el('text',{x:(W+m.l)/2,y:H-4,'text-anchor':'middle'},svg).textContent='Change in mean held-out heading error (degrees)';
+  d.rows.forEach((r,i)=>{ const y=m.t+i*rh+rh/2, col=r[3]<0?'#3F7D4A':r[2]>0?'#C2413A':'#7A8781';
+    el('text',{x:m.l-12,y:y+4,'text-anchor':'end',style:'fill:#17242A'},svg).textContent=r[0];
+    el('line',{x1:xs(r[2]),x2:xs(r[3]),y1:y,y2:y,stroke:col,'stroke-width':2.6,'stroke-linecap':'round'},svg);
+    const dot=el('circle',{cx:xs(r[1]),cy:y,r:6,fill:col,tabindex:0},svg);
+    const ht=`${r[0]}<br>Δ ${r[1].toFixed(3)}° [${r[2].toFixed(3)}, ${r[3].toFixed(3)}]`;
+    dot.addEventListener('mousemove',e=>showTip(e,ht)); dot.addEventListener('mouseleave',hideTip); });
+  $('realNote').innerHTML=`<span class="flag">Observational data</span> ${d.n.toLocaleString()} held-out predictions, 8 trials. Mean error: M0 ${d.m0}°, keep heading ${d.pers}°. 95% paired bootstrap intervals over trials.`;
+}
+document.querySelectorAll('[data-iv]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-iv]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));drawReal(b.dataset.iv);}));
+drawReal('1');
+
+/* ---------- nav highlight ---------- */
+(function(){ const links=[...document.querySelectorAll('.nav a.l')]; const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+  const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ links.forEach(a=>a.classList.remove('on')); const a=map.get(e.target.id); if(a&&!a.classList.contains('ws')) a.classList.add('on'); } }),{rootMargin:'-45% 0px -50% 0px'});
+  ['question','models','evidence','pipeline','workspace'].forEach(id=>{const s=$(id); if(s) io.observe(s);}); })();
+
+/* =================== Workspace (API v1 client) =================== */
+const LIMIT_BYTES=8000000, LIMIT_ROWS=20000;
+const state={ base:null, token:null, files:{}, job:null, poll:null, demo:false, mode:'browser', engineReady:false, busy:false, browserZip:null };
+const TEMPLATE={ data_kind:'observational', crs:'local_metres', n_folds:2, split_columns:['group_id','bout_id'], uncertainty_columns:['group_id'], ties_independent:false, radius:10, shuffle_seeds:[11,29,47], n_bootstrap:2000, seed:42 };
+$('cfg').value = JSON.stringify(TEMPLATE, null, 2);
+
+function setStatus(elm, text, kind){ elm.textContent=text; elm.className='status'+(kind?' '+kind:''); elm.classList.remove('hidden'); }
+function msg(elm, text, err){ elm.textContent=text||''; elm.classList.toggle('err', !!err); }
+
+function normaliseBase(raw){
+  let u; try{ u=new URL(raw.trim()); }catch{ throw new Error('Enter a full address starting with https://'); }
+  const local = ['localhost','127.0.0.1'].includes(u.hostname);
+  if(u.protocol!=='https:' && !(local && u.protocol==='http:')) throw new Error('Use an HTTPS address. Plain HTTP is accepted only for localhost testing.');
+  if(u.username||u.password||u.search||u.hash) throw new Error('Remove credentials, query strings or fragments from the address.');
+  return u.origin + u.pathname.replace(/\/+$/,'');
+}
+async function api(path, opts={}){
+  if(!state.base||!state.token) throw new Error('Connect to the server first.');
+  const res = await fetch(state.base+path, { method: opts.method||'GET', headers: Object.assign({'Authorization':'Bearer '+state.token}, opts.json?{'Content-Type':'application/json'}:{}), body: opts.json?JSON.stringify(opts.json):undefined, redirect:'error', cache:'no-store', credentials:'omit', mode:'cors' });
+  if(!res.ok){ let m=''; try{ m=(await res.json()).error; }catch{} if(res.status===401) m='The server rejected this access token. Copy the whole line from the access-token file again.'; if(res.status===403) m='The server does not allow this website. Restart the service with --allowed-origin '+location.origin+'.'; throw new Error(m || `Server answered ${res.status}.`); }
+  if(opts.raw) return res;
+  if(opts.text) return res.text();
+  const ct=res.headers.get('content-type')||''; return ct.includes('json') ? res.json() : res.text();
+}
+function friendlyNetError(e){
+  if(e instanceof TypeError) return 'The server could not be reached. Check the address, that the service is running behind HTTPS, and that it was started with --allowed-origin '+location.origin+'.';
+  return e.message;
+}
+
+$('btnConnect').addEventListener('click', async () => {
+  msg($('connectMsg'),''); let base;
+  try{ base=normaliseBase($('svcUrl').value); }catch(e){ msg($('connectMsg'),e.message,true); return; }
+  const token=$('svcToken').value.trim(); if(token.length<32){ msg($('connectMsg'),'The token looks too short. Copy the whole line from the access-token file.',true); return; }
+  state.base=base; state.token=token; setStatus($('svcStatus'),'Connecting','busy');
+  try{
+    const h=await api('/health');
+    if(h.service!=='sheep-reference-analysis'||h.api_version!==1) throw new Error('This address is not a sheep reference analysis service (API version 1).');
+    setStatus($('svcStatus'),'Connected','ok');
+    $('svcInfo').innerHTML=`Code commit <code>${esc(h.source_commit?h.source_commit.slice(0,12):'unknown')}</code> · up to ${esc(h.max_rows)} rows and ${Math.round(h.max_file_bytes/1e6)} MB per file · ${esc(h.max_jobs)} retained runs${h.active_job?' · <b>an analysis is running now; wait for it before starting another</b>':''}`;
+    $('btnDisconnect').disabled=false; $('btnJobs').disabled=false; $('stepConnect').classList.add('done'); refreshRun();
+  }catch(e){ state.base=null; state.token=null; setStatus($('svcStatus'),'Not connected','err'); msg($('connectMsg'),friendlyNetError(e),true); }
+});
+$('btnDisconnect').addEventListener('click', () => { stopPoll(); state.base=null; state.token=null; $('svcToken').value=''; $('svcInfo').textContent=''; setStatus($('svcStatus'),'Not connected'); $('btnDisconnect').disabled=true; $('btnJobs').disabled=true; $('jobsBox').classList.add('hidden'); $('stepConnect').classList.remove('done'); refreshRun(); });
+
+function countRowsAndCheckHeader(text){
+  const lines=text.split(/\r\n|\n|\r/); let n=lines.length; while(n>0 && lines[n-1]==='') n--;
+  const header=(lines[0]||'').split(',').map(s=>s.replace(/^"|"$/g,''));
+  if(!header.length||header.some(h=>!h.trim())) throw new Error('The first row needs non-empty column names.');
+  if(new Set(header).size!==header.length) throw new Error('Column names must be unique.');
+  return { rows: Math.max(0,n-1), header };
+}
+function bindFile(inputId, key, dropId, metaId, required){
+  $(inputId).addEventListener('change', async e => {
+    const f=e.target.files[0]; const drop=$(dropId), meta=$(metaId); delete state.files[key]; drop.classList.remove('ok','bad');
+    if(!f){ meta.textContent='No file chosen'; refreshRun(); return; }
+    try{
+      if(f.size>LIMIT_BYTES) throw new Error(`${(f.size/1e6).toFixed(1)} MB is over the 8 MB limit. Use the command-line workflow for larger studies.`);
+      const text=await f.text(); if(!text.trim()) throw new Error('The file is empty.');
+      const {rows,header}=countRowsAndCheckHeader(text);
+      if(rows>LIMIT_ROWS) throw new Error(`${rows.toLocaleString()} rows is over the 20,000 row limit. Use the command-line workflow rather than splitting biological blocks.`);
+      if(key==='trajectories'){ const need=['group_id','bout_id','individual_id','timestamp']; const miss=need.filter(c=>!header.includes(c)); if(miss.length) throw new Error('Missing column'+(miss.length>1?'s':'')+': '+miss.join(', ')); }
+      state.files[key]=text; drop.classList.add('ok'); meta.textContent=`${f.name} · ${rows.toLocaleString()} rows · ${(f.size/1024).toFixed(0)} KB`;
+    }catch(err){ drop.classList.add('bad'); meta.textContent=err.message; }
+    refreshRun();
+  });
+}
+bindFile('fTraj','trajectories','dropTraj','mTraj',true); bindFile('fTies','ties','dropTies','mTies'); bindFile('fFolds','folds','dropFolds','mFolds');
+
+function readConfig(){ let c; try{ c=JSON.parse($('cfg').value); }catch(e){ throw new Error('Settings are not valid JSON: '+e.message); } if(!c||typeof c!=='object'||Array.isArray(c)) throw new Error('Settings must be a JSON object.'); return c; }
+function syncRadiosToCfg(){ try{ const c=readConfig(); c.data_kind=document.querySelector('input[name=kind]:checked').value; c.ties_independent=document.querySelector('input[name=indep]:checked').value==='true'; $('cfg').value=JSON.stringify(c,null,2); msg($('cfgMsg'),''); }catch(e){ msg($('cfgMsg'),e.message,true);} refreshRun(); }
+document.querySelectorAll('input[name=kind],input[name=indep]').forEach(r=>r.addEventListener('change',syncRadiosToCfg));
+$('cfg').addEventListener('input',()=>{ try{ const c=readConfig(); msg($('cfgMsg'),''); if(c.data_kind) { const r=document.querySelector(`input[name=kind][value="${c.data_kind}"]`); if(r) r.checked=true; } if(typeof c.ties_independent==='boolean'){ document.querySelector(`input[name=indep][value="${c.ties_independent}"]`).checked=true; } }catch(e){ msg($('cfgMsg'),e.message,true);} refreshRun(); });
+$('consent').addEventListener('change',refreshRun);
+const SHEEP_PRESET={data_kind:'observational',coordinate_mode:'metric',crs:'local_metres',min_speed:0.3,max_speed:8.0,max_gap:1.5,sampling_interval_seconds:1.0,radius:5.0,n_folds:8,split_columns:['group_id','session_id'],uncertainty_columns:['group_id','session_id'],min_individual_train:10,n_bootstrap:2000,shuffle_seeds:[11,29,47,71,97],seed:42,ties_independent:true,common_shuffle_controls:true};
+$('presetSheep').addEventListener('click',()=>{ $('cfg').value=JSON.stringify(SHEEP_PRESET,null,2); document.querySelector('input[name=kind][value=observational]').checked=true; document.querySelector('input[name=indep][value=true]').checked=true; msg($('cfgMsg'),'Settings match PROTOCOL.md for the public sheep demo files.'); refreshRun(); });
+try{ const api=new URLSearchParams(location.search).get('api'); if(api){ $('svcUrl').value=api; document.querySelector('input[name=where][value=server]').checked=true; } }catch(e){}
+function applyMode(){
+  state.mode=document.querySelector('input[name=where]:checked').value; const b=state.mode==='browser';
+  $('modeBrowser').classList.toggle('hidden',!b); $('modeServer').classList.toggle('hidden',b);
+  $('btnJobs').classList.toggle('hidden',b); $('btnDelete').classList.toggle('hidden',b);
+  $('consentText').textContent = b ? 'I am authorised to analyse these files.' : 'I am authorised to send these files to this server, and the server is approved for this data.';
+  $('stepConnect').classList.toggle('done', b ? state.engineReady : !!state.base);
+  refreshRun();
+}
+document.querySelectorAll('input[name=where]').forEach(r=>r.addEventListener('change',applyMode));
+
+/* ---------- in-browser engine (Pyodide worker running the repository's Python) ---------- */
+let engine=null, engineHandlers={};
+function startEngine(){
+  if(engine) return;
+  if(location.protocol==='file:'){ setStatus($('engStatus'),'Unavailable','err'); msg($('engMsg'),'The in-browser engine needs the online website; it cannot start from a file opened from a USB stick. Use "Load recorded sheep run" instead.',true); return; }
+  try{ engine=new Worker('engine/worker.js'); }catch(e){ setStatus($('engStatus'),'Unavailable','err'); msg($('engMsg'),'This browser could not start the engine: '+e.message,true); return; }
+  engine.onmessage=(e)=>{ const m=e.data; (engineHandlers[m.type]||(()=>{}))(m); };
+  engine.onerror=(e)=>{ setStatus($('engStatus'),'Stopped','err'); msg($('engMsg'),'The engine stopped: '+(e.message||'unknown error')+'. Reload the page and start it again.',true); state.engineReady=false; state.busy=false; engine=null; $('progWrap').classList.add('hidden'); refreshRun(); };
+  engineHandlers.progress=(m)=>{ if(!state.engineReady){ setStatus($('engStatus'),m.label,'busy'); } else { showProgress(m.label,m.share); } };
+  engineHandlers.ready=(m)=>{ state.engineReady=true; setStatus($('engStatus'),'Ready in this browser','ok'); $('btnEngine').disabled=true;
+    const v=m.versions||{}; $('engInfo').innerHTML=`Code commit <code>${esc((m.commit||'').slice(0,12))}</code> · Python ${esc(v.python||'')} · numpy ${esc(v.numpy||'')} · pandas ${esc(v.pandas||'')} · scipy ${esc(v.scipy||'')} · matplotlib ${esc(v.matplotlib||'')} · nothing leaves this computer`;
+    $('stepConnect').classList.add('done'); msg($('engMsg'),''); refreshRun(); };
+  engineHandlers.error=(m)=>{ if(!state.engineReady){ setStatus($('engStatus'),'Could not start','err'); msg($('engMsg'),m.message,true); engine=null; return; } finishBrowserRun(null,m); };
+  engineHandlers.done=(m)=>finishBrowserRun(m,null);
+  setStatus($('engStatus'),'Starting','busy'); $('btnEngine').disabled=true; engine.postMessage({type:'init'});
+}
+$('btnEngine').addEventListener('click',startEngine);
+let runT0=0, runTimer=null;
+function elapsed(){ const s=Math.floor((Date.now()-runT0)/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+function showProgress(label,share){ $('progWrap').classList.remove('hidden'); $('progBar').style.width=Math.round(Math.max(0,Math.min(1,share))*100)+'%'; $('progLabel').textContent=label; }
+async function finishBrowserRun(m,err){
+  clearInterval(runTimer); state.busy=false; $('progWrap').classList.add('hidden');
+  if(err){ setStatus($('runStatus'),'Failed','err'); msg($('runMsg'),err.message,true); $('logBox').textContent=err.detail||err.message; $('logBox').classList.remove('hidden'); refreshRun(); return; }
+  const txt=m.result.bundle, h=await sha256hex(txt);
+  state.browserZip=new Blob([m.zip],{type:'application/zip'}); state.job='browser-'+(h||'run').slice(0,8); state.demo=false;
+  setStatus($('runStatus'),`Complete in ${elapsed()}`,'ok');
+  msg($('runMsg'),`Analysis complete in this browser; all ${m.result.verified.verified_outputs} output files verified against their fingerprints.`);
+  renderBundle(JSON.parse(txt),{job:state.job,hash:h,local:true}); refreshRun();
+  $('results').scrollIntoView({behavior:reduceMotion?'auto':'smooth',block:'start'});
+}
+
+function refreshRun(){
+  let why='';
+  const connected = state.mode==='browser' ? state.engineReady : !!state.base;
+  if(!connected) why = state.mode==='browser' ? 'Start the analysis engine first.' : 'Connect to the server first.';
+  else if(!state.files.trajectories) why='Choose a valid trajectories file.';
+  else { try{ const c=readConfig(); if(!['synthetic','observational'].includes(c.data_kind)) why='Declare the data as observational or synthetic.'; else if(state.files.ties && c.ties_independent!==true) why='Social ties are only accepted when declared independent of the analysed sessions.'; }catch(e){ why=e.message; } }
+  if(!why && !$('consent').checked) why='Confirm you are authorised to send this data.';
+  if(!why && (state.poll||state.busy)) why='An analysis is running.';
+  $('btnRun').disabled=!!why; $('btnRun').title=why; if(connected && why && !state.poll && !state.busy) msg($('runMsg'), why); else if(!why && $('runMsg').dataset.why) msg($('runMsg'),''); $('runMsg').dataset.why = why ? '1' : '';
+}
+
+$('btnRun').addEventListener('click', async () => {
+  const payload={ trajectories: state.files.trajectories, config: readConfig() };
+  if(state.files.ties) payload.ties=state.files.ties; if(state.files.folds) payload.folds=state.files.folds;
+  if(state.mode==='browser'){
+    state.busy=true; $('btnRun').disabled=true; $('logBox').classList.add('hidden'); msg($('runMsg'),'Running in this browser. Keep this tab open; it takes a few minutes.');
+    runT0=Date.now(); setStatus($('runStatus'),'Running 0:00','busy'); showProgress('Starting',0.01);
+    runTimer=setInterval(()=>setStatus($('runStatus'),`Running ${elapsed()}`,'busy'),1000);
+    engine.postMessage({type:'run',payload}); return;
+  }
+  $('btnRun').disabled=true; setStatus($('runStatus'),'Uploading','busy'); msg($('runMsg'),'');
+  try{ const rec=await api('/jobs',{method:'POST',json:payload}); state.job=rec.id; setStatus($('runStatus'),'Running','busy'); msg($('runMsg'),rec.message||''); startPoll(rec.id); }
+  catch(e){ setStatus($('runStatus'),'Not started','err'); msg($('runMsg'),friendlyNetError(e),true); refreshRun(); }
+});
+function stopPoll(){ if(state.poll){ clearInterval(state.poll); state.poll=null; } }
+function startPoll(id){
+  stopPoll(); const t0=Date.now(); let misses=0;
+  state.poll=setInterval(async()=>{
+    try{ const r=await api('/jobs/'+id); const mins=Math.floor((Date.now()-t0)/60000), secs=Math.floor((Date.now()-t0)/1000)%60;
+      misses=0;
+      if(r.status==='running'){ setStatus($('runStatus'),`Running ${mins}:${String(secs).padStart(2,'0')}`,'busy'); return; }
+      misses=0; stopPoll(); msg($('runMsg'),r.message||'');
+      if(r.status==='succeeded'){ setStatus($('runStatus'),`Complete in ${mins}:${String(secs).padStart(2,'0')}`,'ok'); await openJob(id); }
+      else { setStatus($('runStatus'),'Failed','err'); await showLog(id); }
+      refreshRun();
+    }catch(e){ if(++misses<4){ setStatus($('runStatus'),'Reconnecting','busy'); return; } stopPoll(); setStatus($('runStatus'),'Lost contact','err'); msg($('runMsg'),friendlyNetError(e)+' The run may still finish on the server: use Show previous runs.',true); refreshRun(); }
+  }, 3000);
+}
+async function showLog(id){ try{ const t=await api('/jobs/'+id+'/log'); $('logBox').textContent=t; $('logBox').classList.remove('hidden'); $('results').scrollIntoView({behavior:reduceMotion?'auto':'smooth',block:'start'}); }catch(e){ msg($('runMsg'),friendlyNetError(e),true); } }
+async function sha256hex(text){ try{ const d=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join(''); }catch(e){ return null; } }
+async function openJob(id){ try{ const txt=await api('/jobs/'+id+'/bundle',{text:true}); const h=await sha256hex(txt); state.job=id; state.demo=false; renderBundle(JSON.parse(txt),{job:id,hash:h}); }catch(e){ msg($('runMsg'),friendlyNetError(e),true); } }
+
+$('btnJobs').addEventListener('click', async ()=>{
+  const box=$('jobsBox'); if(!box.classList.contains('hidden')){ box.classList.add('hidden'); $('btnJobs').textContent='Show previous runs'; return; }
+  try{ const {jobs}=await api('/jobs'); jobs.sort((a,b)=>(b.created_at||0)-(a.created_at||0));
+    box.innerHTML = jobs.length ? `<table class="jobs"><thead><tr><th>Started</th><th>Status</th><th>Run</th><th></th></tr></thead><tbody>${jobs.map(j=>`<tr><td>${esc(new Date((j.created_at||0)*1000).toLocaleString())}</td><td>${esc(j.status)}</td><td><code>${esc(j.id.slice(0,8))}</code></td><td>${j.status==='succeeded'?`<button class="btn ghost" data-open="${esc(j.id)}" style="padding:6px 12px;font-size:14px">Open</button>`:j.status==='failed'?`<button class="btn ghost" data-log="${esc(j.id)}" style="padding:6px 12px;font-size:14px">View log</button>`:''}</td></tr>`).join('')}</tbody></table>` : '<p class="msg">No retained runs on this server.</p>';
+    box.classList.remove('hidden'); $('btnJobs').textContent='Hide previous runs';
+    box.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>openJob(b.dataset.open)));
+    box.querySelectorAll('[data-log]').forEach(b=>b.addEventListener('click',()=>{state.job=b.dataset.log; showLog(b.dataset.log);}));
+  }catch(e){ msg($('runMsg'),friendlyNetError(e),true); }
+});
+
+$('btnZip').addEventListener('click', async ()=>{
+  if(state.demo||!state.job) return;
+  if(state.job.startsWith('browser-')){ if(!state.browserZip) return; const a=document.createElement('a'); a.href=URL.createObjectURL(state.browserZip); a.download=`analysis-results-${state.job}.zip`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); return; }
+  try{ const res=await api('/jobs/'+state.job+'/archive',{raw:true}); const blob=await res.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`analysis-results-${state.job.slice(0,8)}.zip`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
+  catch(e){ msg($('runMsg'),friendlyNetError(e),true); }
+});
+$('btnDelete').addEventListener('click', async ()=>{
+  if(state.demo||!state.job) return;
+  if(!confirm('Delete this run\'s uploads and outputs from the server? Download and verify the archive first. Your original files are not affected.')) return;
+  try{ await api('/jobs/'+state.job,{method:'DELETE'}); $('resBody').classList.add('hidden'); $('resEmpty').classList.remove('hidden'); $('resEmpty').textContent='The server copy was deleted.'; $('resFlag').innerHTML=''; state.job=null; }
+  catch(e){ msg($('runMsg'),friendlyNetError(e),true); }
+});
+
+let lastBundle=null; window.addEventListener('resize',()=>{ if(lastBundle && !$('resBody').classList.contains('hidden')) renderBundle(lastBundle.b,lastBundle.o); });
+$('showShuffles').addEventListener('change',()=>{ if(lastBundle) renderBundle(lastBundle.b,lastBundle.o); });
+$('loadDemo').addEventListener('click', ()=>{ state.demo=true; renderBundle(DEMO,{demo:true}); $('results').scrollIntoView({behavior:reduceMotion?'auto':'smooth',block:'start'}); });
+
+const MODEL_ORDER=['M0','M1','M2','M3','M4','persistence','constant_turn','distance'];
+const MODEL_NAME={M0:'M0 baseline',M1:'M1 individual',M2:'M2 ties',M3:'M3 both',M4:'M4 influence',persistence:'Persistence',constant_turn:'Constant turn',distance:'Distance only'};
+const mname=m=>MODEL_NAME[m]|| (m.startsWith('shuffle')?'Shuffled ties '+m.split('_').slice(1).join(' '):m);
+const DEG=180/Math.PI;
+const short=m=>({persistence:'Persist.',constant_turn:'Const. turn',distance:'Distance'})[m]||(m.startsWith('shuffle')?'Shuffle '+m.split('_')[1]:m);
+
+function drawForest(svg, cs){
+  if(!cs.length){ svg.innerHTML=''; svg.setAttribute('viewBox','0 0 10 10'); return; }
+    svg.innerHTML=''; const W=Math.max(360, Math.round(svg.parentElement.clientWidth||900)), narrow=W<620, rowH=narrow?26:30, m={l:narrow?150:250,r:20,t:30,b:44}, H=m.t+m.b+rowH*cs.length;
+  svg.style.fontSize=narrow?'11px':'13px';
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const vals=cs.flatMap(c=>[c.ci95_low,c.ci95_high,c.mean_delta_mae]).map(v=>v*DEG); let lo=Math.min(0,...vals), hi=Math.max(0,...vals); const pad=(hi-lo)*0.08||0.1; lo-=pad; hi+=pad; const span=hi-lo; hi=Math.max(hi, span*0.28); lo=Math.min(lo, -span*0.28);
+  const xs=v=>m.l+(v-lo)/(hi-lo)*(W-m.l-m.r);
+  const raw=(hi-lo)/5, mag=Math.pow(10,Math.floor(Math.log10(raw))), stp=[1,2,2.5,5,10].map(k=>k*mag).find(k=>k>=raw); const dec=Math.max(0,-Math.floor(Math.log10(stp)+1e-9)+(stp/mag===2.5?1:0));
+  for(let v=Math.ceil(lo/stp)*stp; v<=hi+1e-12; v+=stp){ el('line',{x1:xs(v),x2:xs(v),y1:m.t,y2:H-m.b,class:'ax'},svg); el('text',{x:xs(v),y:H-m.b+18,'text-anchor':'middle'},svg).textContent=(Math.abs(v)<stp/1e6?0:v).toFixed(dec); }
+  el('line',{x1:xs(0),x2:xs(0),y1:m.t-4,y2:H-m.b,stroke:'#17242A','stroke-width':1.2},svg);
+  el('text',{x:(W+m.l)/2,y:H-6,'text-anchor':'middle'},svg).textContent='Change in mean heading error (degrees)';
+  el('text',{x:xs(0)-8,y:m.t-12,'text-anchor':'end',style:'fill:#3F7D4A;font-weight:600'},svg).textContent='alternative better';
+  el('text',{x:xs(0)+8,y:m.t-12,'text-anchor':'start',style:'fill:#C2413A;font-weight:600'},svg).textContent='reference better';
+  cs.forEach((c,i)=>{ const y=m.t+i*rowH+rowH/2, l=c.ci95_low*DEG, h=c.ci95_high*DEG, d=c.mean_delta_mae*DEG;
+    const better=h<0, worse=l>0, col=better?'#3F7D4A':worse?'#C2413A':'#7A8781';
+    el('text',{x:m.l-12,y:y+4,'text-anchor':'end',style:'fill:#17242A'},svg).textContent= narrow ? `${short(c.alternative)} vs ${short(c.reference)}` : `${mname(c.alternative)}  vs  ${mname(c.reference)}`;
+    el('line',{x1:xs(l),x2:xs(h),y1:y,y2:y,stroke:col,'stroke-width':2.4,'stroke-linecap':'round'},svg);
+    const dot=el('circle',{cx:xs(d),cy:y,r:5.5,fill:col,tabindex:0},svg);
+    const ht=`${esc(mname(c.alternative))} vs ${esc(mname(c.reference))}<br>Δ ${d.toFixed(3)}° [${l.toFixed(3)}, ${h.toFixed(3)}]<br>${c.n_blocks} blocks · ${c.n_bootstrap} draws`;
+    dot.addEventListener('mousemove',e=>showTip(e,ht)); dot.addEventListener('mouseleave',hideTip); });
+}
+
+function compareToReference(b){
+  const ri=DEMO.input_sha256||{}, bi=b.input_sha256||{};
+  if(!['trajectories','ties','config'].every(k=>ri[k]&&ri[k]===bi[k])) return null;
+  if(b.comparisons.length!==DEMO.comparisons.length||b.scores.length!==DEMO.scores.length) return {missing:true};
+  const ck=c=>c.reference+'|'+c.alternative, ref=new Map(DEMO.comparisons.map(c=>[ck(c),c]));
+  const META=['model','n_observations','mean_absolute_error','mean_cosine_alignment'];
+  const sk=x=>x.model+'|'+Object.keys(x).filter(k=>!META.includes(k)).sort().map(k=>x[k]).join('|'), rs=new Map(DEMO.scores.map(x=>[sk(x),x]));
+  let maxd=0, n=0;
+  for(const c of b.comparisons){ const r=ref.get(ck(c)); if(!r) return {missing:true}; for(const f of ['mean_delta_mae','ci95_low','ci95_high']){ maxd=Math.max(maxd,Math.abs(c[f]-r[f])); n++; } }
+  for(const x of b.scores){ const r=rs.get(sk(x)); if(!r) return {missing:true}; maxd=Math.max(maxd,Math.abs(x.mean_absolute_error-r.mean_absolute_error)); n++; }
+  return {maxd,n};
+}
+
+function renderBundle(b, opts){
+  lastBundle={b,o:opts}; $('logBox').classList.add('hidden');
+  if(!b||b.schema_version!==1||!Array.isArray(b.scores)||!Array.isArray(b.comparisons)){ msg($('runMsg'),'The returned results are not a version 1 analysis bundle.',true); return; }
+  const a=b.audit||{}, s=a.structural||{}, kind=a.data_kind||(b.config&&b.config.data_kind);
+  $('resTitle').textContent = opts.demo ? 'Recorded run: 14 Merino sheep, public data' : opts.local ? 'Results computed in this browser' : 'Results for run '+String(opts.job||'').slice(0,8);
+  $('resFlag').innerHTML = kind==='synthetic' ? '<span class="flag syn">Synthetic data: checks software only</span>' : '<span class="flag">Observational data: requires study review</span>';
+  const kp=[[s.groups,'groups'],[s.individuals,'individuals'],[s.rows&&s.rows.toLocaleString(),'position rows'],[a.eligible_transitions&&a.eligible_transitions.toLocaleString(),'predicted transitions'],[a.uncertainty_units,'uncertainty units'],[a.sampling_interval_seconds!=null?a.sampling_interval_seconds+' s':'–','prediction interval']];
+  const hh=opts.hash||(opts.demo?DEMO_HASH:null); const chk=opts.demo?null:compareToReference(b); let line='';
+  if(hh) line=`Results fingerprint (SHA-256 of analysis_bundle.json): <code>${hh.slice(0,16)}…</code>`;
+  if(chk){
+    if(hh===DEMO_HASH) line+=' <b style="color:#3F7D4A">byte-identical to the recorded reference run</b>';
+    else if(chk.missing) line+=' <b style="color:#8B2B25">same input files as the recorded run, but a different set of models or blocks</b>';
+    else if(chk.maxd<1e-7) line+=`<br><b style="color:#3F7D4A">Same input files as the recorded reference run; all ${chk.n} reported numbers agree</b> (largest difference ${(chk.maxd*DEG).toExponential(1)}°). File bytes can differ when library versions differ.`;
+    else line+=`<br><b style="color:#8B2B25">Same input files as the recorded run, but numbers differ by up to ${(chk.maxd*DEG).toFixed(4)}°.</b> Check the server's software versions.`;
+  }
+  $('resHash').classList.toggle('hidden',!line); $('resHash').innerHTML=line;
+  $('kpis').innerHTML=kp.map(([v,l])=>`<div class="kpi"><b>${esc(v==null?'–':v)}</b><span>${esc(l)}</span></div>`).join('');
+
+  // scores table
+  const showShuf=$('showShuffles').checked; const isShuf=m=>String(m).startsWith('shuffle');
+  const bcols=Object.keys(b.scores[0]||{}).filter(k=>!['model','n_observations','mean_absolute_error','mean_cosine_alignment'].includes(k)); const multi=new Set(bcols.map(k=>b.scores.map(r=>r[k]).join('|'))); const blockKey=bcols.find(k=>new Set(b.scores.map(r=>r[k])).size>1) || bcols[0] || 'block';
+  const models=[...new Set(b.scores.map(r=>r.model).filter(m=>showShuf||!isShuf(m)))].sort((x,y)=>{const ix=MODEL_ORDER.indexOf(x),iy=MODEL_ORDER.indexOf(y);return (ix<0?99:ix)-(iy<0?99:iy)||x.localeCompare(y);});
+  const blocks=[...new Set(b.scores.map(r=>r[blockKey]))];
+  const means={}; models.forEach(m=>{ const rs=b.scores.filter(r=>r.model===m); means[m]=rs.reduce((t,r)=>t+r.mean_absolute_error,0)/rs.length; });
+  const best=models.reduce((x,y)=>means[y]<means[x]?y:x, models[0]);
+  $('scoreTbl').innerHTML=`<thead><tr><th>Model</th>${blocks.map(k=>`<th>${esc(k)}</th>`).join('')}<th>Mean</th></tr></thead><tbody>${models.map(m=>`<tr class="${m===best?'best':''}"><td>${esc(mname(m))}</td>${blocks.map(k=>{const r=b.scores.find(x=>x.model===m&&x[blockKey]===k);return `<td>${r?(r.mean_absolute_error*DEG).toFixed(3)+'°':'–'}</td>`;}).join('')}<td><b>${(means[m]*DEG).toFixed(3)}°</b></td></tr>`).join('')}</tbody>`;
+
+  // forest plots: one scale for non-social baselines, one for social-model contrasts
+  const BASE=new Set(['persistence','constant_turn']);
+  const keep=b.comparisons.filter(c=>showShuf||!(isShuf(c.reference)||isShuf(c.alternative)));
+  drawForest($('forestBase'), keep.filter(c=>BASE.has(c.reference)));
+  drawForest($('forest'), keep.filter(c=>!BASE.has(c.reference)));
+
+  $('warnList').innerHTML=(a.warnings||[]).concat(b.notice?[b.notice]:[]).map(w=>`<li>${esc(w)}</li>`).join('') || '<li>No warnings returned.</li>';
+  $('btnZip').disabled=!!opts.demo; $('btnDelete').disabled=!!opts.demo||!!opts.local;
+  $('btnZip').title=opts.demo?'Available for real runs on the server':''; $('btnDelete').title=$('btnZip').title;
+  $('resEmpty').classList.add('hidden'); $('resBody').classList.remove('hidden');
+}
+applyMode();
+</script>
+</body>
+</html>

@@ -27,7 +27,7 @@ python -m pip install -r requirements-service.txt
 python -m unittest discover -s tests -v
 python src/serve_analysis.py \
   --work-root "$SHEEP_WORK_ROOT/service" \
-  --allowed-origin https://sheep-motion-lab.youma6.chatgpt.site
+  --allowed-origin https://raspy-sun-25b9.umaraziz.workers.dev
 ```
 
 If the change is still an open PR, explicitly check out `research/private-analysis-service`
@@ -36,6 +36,12 @@ restart afterward. The health endpoint records its startup commit; output manife
 executed source hashes and dirty-tree state. This command runs in the foreground. Arrange
 an approved supervisor/service manager with the administrator for persistent operation.
 Do not run multiple processes against one work root; a process lock prevents this in the CLI.
+
+For a single user without an institutional HTTPS address, `scripts/start_service_on_server.sh`
+starts the service with the website origin and prints an SSH tunnel command
+(`ssh -N -L 8765:127.0.0.1:8765 user@server`); the website then uses
+`?api=http://127.0.0.1:8765`. The website can also run the analysis entirely in the browser,
+which needs no service.
 
 The service listens only on `127.0.0.1:8765`. It generates a random access token in
 `$SHEEP_WORK_ROOT/service/access-token`, readable only by your account. Read that file on
