@@ -4,6 +4,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Julia 1.10.5](https://img.shields.io/badge/Julia-1.10.5-9558B2.svg)](https://julialang.org/)
 
+**In one paragraph:** this repository turns animal tracking files into an audited,
+leakage-controlled test of whether individual responsiveness and social ties improve
+predictions of where each animal heads next, compared with simpler and non-social models.
+Every run is reproducible and every output file carries a SHA-256 fingerprint.
+
+- **Website:** [raspy-sun-25b9.umaraziz.workers.dev](https://raspy-sun-25b9.umaraziz.workers.dev)
+  explains the model and runs this repository's analysis on uploaded files, either inside the
+  browser (no server; the unchanged Python code runs in WebAssembly) or on a private server.
+- **Public-data demonstration:** [examples/public_sheep](examples/public_sheep/) prepares the
+  published tracking of 14 Merino sheep from Jadhav et al. (2024, *Communications Biology* 7:1543)
+  and records the expected results. No project data are included in this repository.
+
 Research software for empirical studies of sheep collective motion. The current focus is
 validated movement and social-behaviour data, individual variation, social relationships,
 and reliable empirical inputs for modelling. The Julia agent-based model is a supporting
@@ -54,12 +66,19 @@ model definitions, frozen folds, uncertainty units, sensitivity checks and expor
 A future browser viewer can inspect `analysis_bundle.json` without recomputing results.
 All empirical exports require privacy review before sharing.
 
-## Private website analysis
+## Website analysis
 
-The [private service setup](docs/PRIVATE_ANALYSIS_SERVICE.md) connects the website to the
-reference Python workflow for uploads, run status, verified downloads and explicit retention.
-It requires a running approved service and HTTPS routing. The browser explorer remains a
-separate descriptive tool; opening the website alone does not start analysis on Mserver.
+The website offers two ways to run the same reference workflow:
+
+- **In this browser.** The unchanged `src/*.py` files run in Pyodide (CPython compiled to
+  WebAssembly) inside the visitor's browser tab, with the service's own request checks and
+  output verification. Files never leave the computer. See [website/](website/).
+- **On an analysis server.** The [private service setup](docs/PRIVATE_ANALYSIS_SERVICE.md)
+  connects the website to `src/serve_analysis.py` for uploads, run status, verified downloads
+  and explicit retention. It requires a running approved service and HTTPS routing, or an SSH
+  tunnel for a single user ([scripts/start_service_on_server.sh](scripts/start_service_on_server.sh)).
+
+Use only data you are permitted to process in the chosen place.
 
 ## Current model architecture
 

@@ -1,10 +1,12 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "Sheep collective ABM: heterogeneous alignment-response simulations"
+title: "Sheep collective motion: empirical analysis pipeline, analysis service and agent-based model"
 authors:
   - given-names: Umar
     family-names: "Aziz"
 repository-code: "https://github.com/Umar2213/sheep-collective-abm"
 license: MIT
-date-released: "2026-06-13"
+version: "1.1.0"
+date-released: "2026-10-27"
+url: "https://raspy-sun-25b9.umaraziz.workers.dev"
 
